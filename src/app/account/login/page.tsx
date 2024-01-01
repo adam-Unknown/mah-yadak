@@ -4,7 +4,7 @@ import {
   AuthViaSmsFormData,
   ActionError,
 } from "@/lib/definition";
-import { login, sendCode } from "@/lib/actions";
+import { login, sendCode } from "@/lib/actions/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { sleep } from "@/utils/helper";

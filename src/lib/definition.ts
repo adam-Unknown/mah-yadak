@@ -42,11 +42,13 @@ export const VerifyCodeFormSchema = z.object({
 
 // ----------------- Types here --------------
 
+export type userData = {
+  name: string;
+  // TODO: other information
+};
+
 export type sessionData = {
-  user?: {
-    name: string;
-    // TODO: other information
-  };
+  user?: userData;
   moblieNumber?: string;
   vrfCode?: { code: string; expire: number };
   verified?: boolean;
@@ -58,7 +60,7 @@ export type MobileNumber = z.infer<typeof AuthViaMobileNumberFormSchema>;
 
 export type VerifyCode = z.infer<typeof VerifyCodeFormSchema>;
 
-type PathUnion = keyof z.infer<typeof AuthViaSmsFormSchema>;
+export type PathUnion = keyof z.infer<typeof AuthViaSmsFormSchema>;
 
 export type ActionError = { msg: string; path: PathUnion | "root" }[];
 export type ActionReturn = { succ: boolean; err?: ActionError };

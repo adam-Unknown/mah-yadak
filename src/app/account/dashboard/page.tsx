@@ -1,11 +1,14 @@
-import useSession from "@/hooks/useSession";
-import { logout } from "@/lib/actions";
+"use client";
+import { logout } from "@/lib/actions/auth";
+import { userData } from "@/lib/definition";
+import { fetchJSON } from "@/utils/helper";
+import useSWR from "swr";
 
-async function Dashboard() {
-  const { user } = await useSession();
+function Dashboard() {
+  const { data: user, error } = useSWR<userData>("/api/user", fetchJSON);
   return (
     <div>
-      <h1>{user?.name}</h1>
+      {error ? <div>failed to load</div> : <h1>Hi {user?.name}!</h1>}
       <form action={logout}>
         <button type="submit">Sign out</button>
       </form>

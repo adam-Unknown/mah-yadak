@@ -3,15 +3,12 @@ import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
 import {
   ActionReturn,
-  AuthViaMobileNumberFormSchema,
   AuthViaSmsFormSchema,
   CODE_EXPIRATION,
   MoblieNumberSchema,
   sessionData,
-  VerifyCodeFormSchema,
-} from "./definition";
-import { z } from "zod";
-import { genVrfCode, getErrMsgFromZod } from "@/utils/auth-utils";
+} from "../definition";
+import { zodErrToActionErr } from "@/utils/auth";
 import { sessionOptions } from "@/session.config";
 
 export const login = async (data: unknown): Promise<ActionReturn> => {
@@ -30,7 +27,7 @@ export const login = async (data: unknown): Promise<ActionReturn> => {
   if (!validatedFields.success) {
     return {
       succ: false,
-      err: getErrMsgFromZod(validatedFields.error),
+      err: zodErrToActionErr(validatedFields.error),
     };
   }
   const { mobileNumber, vrfCode } = validatedFields.data;

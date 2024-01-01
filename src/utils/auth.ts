@@ -1,4 +1,4 @@
-import { ActionError } from "@/lib/definition";
+import { ActionError, PathUnion } from "@/lib/definition";
 import { ZodError } from "zod";
 
 export function genVrfCode(): string {
@@ -10,8 +10,8 @@ export function genVrfCode(): string {
   return randomNumber;
 }
 
-export const getErrMsgFromZod = (zErr: ZodError): ActionError =>
+export const zodErrToActionErr = (zErr: ZodError): ActionError =>
   zErr.issues.reduce((errors: ActionError, issue) => {
-    errors.push({ msg: issue.message, path: issue.path[0] as string });
+    errors.push({ msg: issue.message, path: issue.path[0] as PathUnion });
     return errors;
   }, []);

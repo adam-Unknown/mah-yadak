@@ -1,5 +1,9 @@
 "use client";
 
 export default function index() {
-  return <></>;
+  return (
+    <>
+      <p>Index</p>
+    </>
+  );
 }
