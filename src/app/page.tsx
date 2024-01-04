@@ -1,9 +1,15 @@
-"use client";
+"use server";
 
-export default function index() {
+export default async function index() {
   return (
     <>
-      <p>Index</p>
+      <h1>سلام دنیا</h1>
+      <p>معرفی سایت</p>
+      <a>ورود به فروشگاه</a>
+      <input
+        type="text"
+        placeholder="جستوجو محصول در میان هزاران محصول موجود در فروشگاه"
+      />
     </>
   );
 }
