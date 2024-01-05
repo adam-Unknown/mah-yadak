@@ -7,7 +7,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div>
       {/* Add your layout components here */}
       {/* Don't use header like yadakjo app */}
-      <main>{children}</main>
+      {children}
       <Navbar />
     </div>
   );
