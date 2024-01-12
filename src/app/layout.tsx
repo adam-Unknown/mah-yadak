@@ -5,7 +5,7 @@ export const metadata = {
 };
 
 // This layout not going to have and ui component but, context providers, fundamental styles, and other things that we want to be available to all pages.
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;

@@ -1,6 +1,6 @@
 import { sessionData, userData } from "@/lib/definition";
 import { sessionOptions } from "@/session.config";
-import { sleep } from "@/utils/helper";
+import { sleep } from "@/lib/utils/helper";
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
 

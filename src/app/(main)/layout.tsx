@@ -1,4 +1,6 @@
-import Navbar from "@/components/navbar";
+"use server";
+import Cart from "@/components/navbar/items/cart";
+import Navbar from "@/components/navbar/navbar";
 import React from "react";
 
 // this layout going to be used for all pages which would include the navbar that appears on all pages, and this going to be client component and not server component but also it's going to have server compoentns inside of it.
@@ -8,7 +10,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* Add your layout components here */}
       {/* Don't use header like yadakjo app */}
       {children}
-      <Navbar />
+      <Navbar>
+        {/* This is a client component */}
+        <Cart />
+        {/* This is a server component and need this file to be a server component to send server component to client component*/}
+      </Navbar>
     </div>
   );
 };

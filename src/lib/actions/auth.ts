@@ -2,130 +2,199 @@
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
 import {
-  ActionReturn,
-  AuthViaSmsFormSchema,
-  CODE_EXPIRATION,
-  MoblieNumberSchema,
-  sessionData,
+  MS_TO_RESEND,
+  CodeVerifyFormSchema,
+  PhoneEnterFormSchema,
+  AuthSessionData,
+  State,
+  UserSessionData,
+  UserData,
 } from "../definition";
-import { zodErrToActionErr } from "@/utils/auth";
-import { sessionOptions } from "@/session.config";
+import { authSessionOptions, userSessionOptions } from "@/session.config";
+import { z } from "zod";
+import { getMongoDbCrudExecutor, isRegistered } from "../data";
+import { redirect } from "next/navigation";
 
-export const login = async (data: unknown): Promise<ActionReturn> => {
-  const session = await getIronSession<sessionData>(cookies(), sessionOptions);
+interface PhoneEnterFormState
+  extends State<z.infer<typeof PhoneEnterFormSchema>> {
+  succ?: boolean;
+  ResendError?: string;
+  data?: { msToResend: number };
+}
 
-  // check the no user logged in
-  if (session.user)
-    if (session.verified)
-      return {
-        succ: false,
-        err: [{ msg: "You are already logged in!", path: "root" }],
-      };
+interface CodeVerifyFormSchema
+  extends State<z.infer<typeof CodeVerifyFormSchema>> {}
 
-  // check the form fields
-  const validatedFields = AuthViaSmsFormSchema.safeParse(data);
-  if (!validatedFields.success) {
+export const sendCode = async (
+  prevState: PhoneEnterFormState | undefined,
+  formData: FormData
+): Promise<PhoneEnterFormState | undefined> => {
+  // fetch the session
+  const session = await getIronSession<AuthSessionData>(
+    cookies(),
+    authSessionOptions
+  );
+
+  // TODO: in middleware check if the user is logged in
+
+  // Code is already sent and time to resend is not passed
+  if (
+    session.code &&
+    session.sentAt &&
+    Date.now() - session.sentAt < MS_TO_RESEND
+  ) {
     return {
       succ: false,
-      err: zodErrToActionErr(validatedFields.error),
+      ResendError: "You can resend the code after 1 minute",
+      data: {
+        msToResend: await getMsToResend(session.sentAt),
+      },
     };
   }
-  const { mobileNumber, vrfCode } = validatedFields.data;
 
-  // TODO: check if the moblie number is already in the database and belong to a user
-  if (mobileNumber !== "123")
-    return {
-      succ: false,
-      err: [
-        {
-          msg: "The moblie number is not registerd in server yet!",
-          path: "mobileNumber",
-        },
-      ],
-    };
+  if (!session.phone) {
+    //  TODO: check the form fields
+    let validatedFields = PhoneEnterFormSchema.safeParse({
+      phone: formData.get("phone"),
+    });
+    if (!validatedFields.success) {
+      return {
+        formErrors: validatedFields.error.flatten().formErrors,
+        fieldErrors: validatedFields.error.flatten().fieldErrors,
+      };
+    }
 
-  // check the expiration of the verify code
-  if (Date.now() - (session.vrfCode?.expire || Date.now()) > 0)
-    return {
-      succ: false,
-      err: [{ msg: "The verification code is expired!", path: "vrfCode" }],
-    };
+    validatedFields = await PhoneEnterFormSchema.refine(async ({ phone }) => {
+      //  TODO: Check if phone is already in the database and belong to a user if is ok the return true otherwise false
+      if (!(await isRegistered(phone))) {
+        return false;
+      }
+      return true;
+    }, "This phone number is not registered in system").safeParseAsync({
+      phone: formData.get("phone"),
+    });
+    if (!validatedFields.success) {
+      return {
+        formErrors: validatedFields.error.flatten().formErrors,
+        fieldErrors: validatedFields.error.flatten().fieldErrors,
+      };
+    }
 
-  if (session.vrfCode?.code !== vrfCode)
-    return {
-      succ: false,
-      err: [{ msg: "The verification code is incorrect!", path: "vrfCode" }],
-    };
+    session.phone = validatedFields.data.phone;
+  }
 
-  session.user = { name: "Adam" };
-  session.moblieNumber = mobileNumber;
-  session.verified = true;
+  // generate a VRF code and store it in the session
+  const code = "123456"; // getVrfCode();
+  // TODO: send the code to the user's mobile number
+  // store in session
+  session.code = code;
+  session.sentAt = Date.now();
   await session.save();
-  return { succ: true };
+
+  return {
+    succ: true,
+    data: {
+      msToResend: await getMsToResend(session.sentAt),
+    },
+  };
 };
 
-export const logout = async (): Promise<ActionReturn> => {
-  const session = await getIronSession<sessionData>(cookies(), sessionOptions);
-
-  if (!session.user)
-    return {
-      succ: false,
-      err: [{ msg: "You are not logged in!", path: "root" }],
-    };
+export const logout = async () => {
+  const session = await getIronSession<UserSessionData>(
+    cookies(),
+    userSessionOptions
+  );
 
   session.destroy();
 
   return { succ: true };
 };
 
-export const sendCode = async (data: unknown): Promise<ActionReturn> => {
-  const session = await getIronSession<sessionData>(cookies(), sessionOptions);
+export const verify = async (
+  pervState: CodeVerifyFormSchema | undefined,
+  formData: FormData
+): Promise<CodeVerifyFormSchema | undefined> => {
+  // TODO: in middleware check if the user is logged in
+  const authSession = await getIronSession<AuthSessionData>(
+    cookies(),
+    authSessionOptions
+  );
 
-  // If the user is already logged in, return 400 Bad Request
-  if (session.verified || session.user)
+  if (!authSession.phone) return { formErrors: ["Phone number is not set"] };
+
+  //  TODO: check the form fields
+  let validatedFields = CodeVerifyFormSchema.safeParse({
+    code: formData.get("code"),
+  });
+  if (!validatedFields.success) {
     return {
-      succ: false,
-      err: [{ msg: "You already logged in!", path: "root" }],
+      formErrors: validatedFields.error.flatten().formErrors,
+      fieldErrors: validatedFields.error.flatten().fieldErrors,
     };
-
-  // validate the user' mobile number schema
-  if (!MoblieNumberSchema.safeParse(data).success)
-    return {
-      succ: false,
-      err: [{ msg: "It's not a mobile number!", path: "root" }],
-    };
-
-  // TODO: check the user's moblie number is already registered
-  if (data !== "123")
-    return {
-      succ: false,
-      err: [
-        {
-          msg: "The moblie number is not registerd in server yet!",
-          path: "mobileNumber",
-        },
-      ],
-    };
-
-  // check if first time sending code or not
-  if (session.vrfCode?.code) {
-    const a = Date.now();
-    const b = a - (session.vrfCode?.expire - CODE_EXPIRATION);
-    if (b < 10 * 1000) {
-      // if the code time left to resend not elapsed than
-      return {
-        succ: false,
-        err: [{ msg: "Can't send now so plz be patient", path: "root" }],
-      };
-    }
   }
 
-  // generate a VRF code and store it in the session
-  const code = "321"; // getVrfCode();
-  // TODO: send the code to the user's mobile number
-  // store in session
-  session.vrfCode = { code: "321", expire: Date.now() + CODE_EXPIRATION };
-  await session.save();
+  // verify the code
+  validatedFields = CodeVerifyFormSchema.refine(({ code }) => {
+    return authSession.code === code;
+  }, "Code is invalid").safeParse({
+    code: formData.get("code"),
+  });
+  if (!validatedFields.success) {
+    return {
+      formErrors: validatedFields.error.flatten().formErrors,
+      fieldErrors: validatedFields.error.flatten().fieldErrors,
+    };
+  }
 
-  return { succ: true };
+  const userSession = await getIronSession<UserSessionData>(
+    cookies(),
+    userSessionOptions
+  );
+
+  // ____________________________________
+
+  const getUserData = getMongoDbCrudExecutor<UserData>(
+    "mah-yadak",
+    async (db) =>
+      await db
+        .collection("accounts")
+        .findOne({ phone: authSession.phone })
+        .then((res) => {
+          if (!res) throw new Error("User not found");
+          return { name: res.name, phone: res.phone };
+        })
+  );
+
+  // ____________________________________
+
+  userSession.user = {
+    name: (await getUserData()).name,
+    phone: authSession.phone,
+  };
+  userSession.verified = true;
+  await userSession.save();
+  authSession.destroy();
+  redirect("/");
 };
+
+export const editPhone = async () => {
+  const session = await getIronSession<AuthSessionData>(
+    cookies(),
+    authSessionOptions
+  );
+  session.destroy();
+};
+
+export async function getMsToResend(sentAt?: number) {
+  return (
+    (!!sentAt
+      ? sentAt
+      : (await getIronSession<AuthSessionData>(cookies(), authSessionOptions))
+          .sentAt ?? Date.now() - MS_TO_RESEND) +
+    MS_TO_RESEND -
+    Date.now()
+  );
+}
+
+export const getPhone = async () =>
+  (await getIronSession<AuthSessionData>(cookies(), authSessionOptions)).phone;
