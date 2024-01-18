@@ -1,45 +1,32 @@
-"use server";
 import React from "react";
-import { fetchPart } from "@/lib/data";
+import { fetchPart, getUserSession } from "@/lib/data";
 import PartCarousel from "@/components/ui/carousel/part";
+import AddToCartForm from "@/components/part/add-to-cart";
 
 interface Props {
   params: { id: string };
 }
 
 const Page: React.FC<Props> = async ({ params: { id } }) => {
-  const {
-    id: partId,
-    category,
-    model,
-    brand,
-    available,
-    price,
-    usedFor,
-    suitableFor,
-    imageUrls,
-    notices,
-    description,
-  } = await fetchPart(id);
+  const part = await fetchPart({ partId: id });
+  const user = await getUserSession();
+
   return (
     <div className="mx-[200px] bg-transparent">
-      <PartCarousel imagesUrls={imageUrls} />
-      <p>{`${model} ${suitableFor} used for ${usedFor.join(
+      <PartCarousel imagesUrls={part.imageUrls} />
+      <p>{`${part.model} ${part.suitableFor} used for ${part.usedFor.join(
         ","
-      )} brand ${brand}`}</p>
-      {notices && (
+      )} brand ${part.brand}`}</p>
+      {part.notices && (
         <ul>
-          {notices.map((notice) => (
+          {part.notices.map((notice: any) => (
             <li key={notice}>{notice}</li>
           ))}
         </ul>
       )}
-      <span>price: {price}</span>
-      <form>
-        <label htmlFor="quantity">quantity:</label>
-        <input type="number" name="quantity" id="quantity" />
-        <button type="submit">Add to cart</button>
-      </form>
+      <span>price: {part.price}</span>
+
+      {user && <AddToCartForm partId={part.id} />}
     </div>
   );
 };

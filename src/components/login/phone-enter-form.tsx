@@ -62,7 +62,7 @@ const Submit: React.FC<{ phone?: string }> = ({ phone }) => {
 
   return (
     <input
-      disabled={msToResend > 0 ? true : pending}
+      disabled={(msToResend && 0) > 0 ? true : pending}
       type="submit"
       value={
         pending
@@ -84,7 +84,6 @@ const Edit: React.FC = () => {
       type="button"
       onClick={async () => {
         await editPhone();
-        console.log("editPhone");
       }}
     >
       Edit

@@ -1,19 +1,18 @@
 "use server";
+import { authSessionOptions, userSessionOptions } from "@/session.config";
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
-import {
-  MS_TO_RESEND,
-  CodeVerifyFormSchema,
-  PhoneEnterFormSchema,
-  AuthSessionData,
-  State,
-  UserSessionData,
-  UserData,
-} from "../definition";
-import { authSessionOptions, userSessionOptions } from "@/session.config";
-import { z } from "zod";
-import { getMongoDbCrudExecutor, isRegistered } from "../data";
 import { redirect } from "next/navigation";
+import { z } from "zod";
+import { isRegistered, fetchUser } from "../data";
+import {
+  PhoneEnterFormSchema,
+  CodeVerifyFormSchema,
+  AuthSessionData,
+  MS_TO_RESEND,
+  UserSessionData,
+  State,
+} from "../definition";
 
 interface PhoneEnterFormState
   extends State<z.infer<typeof PhoneEnterFormSchema>> {
@@ -64,22 +63,11 @@ export const sendCode = async (
       };
     }
 
-    validatedFields = await PhoneEnterFormSchema.refine(async ({ phone }) => {
-      //  TODO: Check if phone is already in the database and belong to a user if is ok the return true otherwise false
-      if (!(await isRegistered(phone))) {
-        return false;
-      }
-      return true;
-    }, "This phone number is not registered in system").safeParseAsync({
-      phone: formData.get("phone"),
-    });
-    if (!validatedFields.success) {
+    //  TODO: Check if phone is already in the database and belong to a user if is ok the return true otherwise false
+    if (!(await isRegistered(validatedFields.data.phone)))
       return {
-        formErrors: validatedFields.error.flatten().formErrors,
-        fieldErrors: validatedFields.error.flatten().fieldErrors,
+        fieldErrors: { phone: ["Phone number is not registered"] },
       };
-    }
-
     session.phone = validatedFields.data.phone;
   }
 
@@ -151,29 +139,25 @@ export const verify = async (
     userSessionOptions
   );
 
-  // ____________________________________
+  const user = await fetchUser(userSession.user.phone);
 
-  const getUserData = getMongoDbCrudExecutor<UserData>(
-    "mah-yadak",
-    async (db) =>
-      await db
-        .collection("accounts")
-        .findOne({ phone: authSession.phone })
-        .then((res) => {
-          if (!res) throw new Error("User not found");
-          return { name: res.name, phone: res.phone };
-        })
-  );
+  try {
+    // Check user existence
 
-  // ____________________________________
+    userSession.user = user;
 
-  userSession.user = {
-    name: (await getUserData()).name,
-    phone: authSession.phone,
-  };
-  userSession.verified = true;
-  await userSession.save();
-  authSession.destroy();
+    await userSession.save();
+    // succesed
+  } catch (err) {
+    // failure
+    userSession.destroy();
+    return {
+      formErrors: ["System Failure!"],
+    };
+  } finally {
+    authSession.destroy();
+  }
+
   redirect("/");
 };
 
@@ -182,6 +166,7 @@ export const editPhone = async () => {
     cookies(),
     authSessionOptions
   );
+
   session.destroy();
 };
 
