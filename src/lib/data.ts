@@ -231,9 +231,12 @@ export const fetchPartAvailability = getMongoDbCrudExecutor<
             {
               $match: {
                 $expr: {
-                  $and: [
+                  $not: [
                     {
-                      $ne: ["$status", "COMPLETED"],
+                      $in: [
+                        "$status",
+                        ["CANCELED_BY_USER", "CANCELED_BY_ADMIN", "COMPLETED"],
+                      ],
                     },
                   ],
                 },
@@ -657,6 +660,14 @@ export const cancelOrder = getMongoDbCrudExecutor<
   { belongsTo: string; orderId: string }
 >("orders", async (orders, { belongsTo, orderId }) =>
   orders
-    .deleteOne({ _id: new ObjectId(orderId), belongsTo })
-    .then((r) => !!r.deletedCount)
+    .updateOne(
+      { _id: new ObjectId(orderId), belongsTo },
+      {
+        $set: {
+          status: "CANCELED_BY_USER",
+          updatedAt: new Date(),
+        },
+      }
+    )
+    .then((r) => !!r.modifiedCount)
 );

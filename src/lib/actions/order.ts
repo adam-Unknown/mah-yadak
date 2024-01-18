@@ -56,6 +56,7 @@ export async function orderAction(
       cart: cart,
       invoicesPrint: { cooperate: false, customer: false },
     });
+    
     redirect(`/dashboard/orders/${orderId}`);
   } catch (e) {
     // RECOVERY THE PARTS
