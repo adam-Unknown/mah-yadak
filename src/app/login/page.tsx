@@ -3,14 +3,18 @@ import { createContext, useState } from "react";
 import { SendForm } from "./send-form";
 import { VerifyForm } from "./verify-form";
 
-export const revalidate = 1;
-export const msgSentContext = createContext<{ value: boolean; setValue: any }>({
+interface ContextType {
+  value: boolean;
+  setValue: (value: boolean) => void;
+}
+
+export const msgSentContext = createContext<ContextType>({
   value: false,
   setValue: () => {},
 });
 
 export default function Login() {
-  const [msgSent, setMsgSent] = useState(false);
+  const [msgSent, setMsgSent] = useState<boolean>(false);
 
   return (
     <div>
