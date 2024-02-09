@@ -3,26 +3,27 @@ import { z } from "zod";
 
 // ----------------- Macro? here ------------
 
-export const MS_TO_RESEND = 60000;
+export const SEC_TO_RESEND = 60;
 
 // ----------------- Schemas here --------------
 
 export const PhoneEnterFormSchema = z.object({
   phone: z
     .string({
-      invalid_type_error: "Invalid",
-      required_error: "Phone field is required",
+      invalid_type_error: "شماره نامعتبر",
+      required_error: "شماره همراه را وارد کنید!",
     })
-    .regex(/^09\d{9}$/, "Invalid phone number"),
+    .regex(/^09\d{9}$/, "شماره همراه نامعتبر."),
 });
 
 export const CodeVerifyFormSchema = z.object({
-  code: z
-    .string({
-      invalid_type_error: "Invalid type",
-      required_error: "Required",
+  code: z.coerce
+    .number({
+      invalid_type_error: "کد وارد شده صحیح نمی باشد!",
+      required_error: "کد را وارد کنید!",
     })
-    .regex(/^\d{6}$/, "Invalid format"),
+    .min(6, "کد وارد شده صحیح نمی باشد!")
+    .max(6, "کد وارد شده صحیح نمی باشد!"),
 });
 
 export const AddToCartFormSchema = z.object({
@@ -43,12 +44,7 @@ export const OrderFormSchema = z.object({
   customerInvoicePrint: z.coerce.boolean(),
 });
 
-export const Profession = z.enum([
-  "ELECTRICIAN",
-  "SUSPENSION",
-  "MECHANIC",
-  "NONE",
-]);
+export const Profession = z.enum(["برقکار", "جلوبندساز", "مکانیک", "هیچکدام"]);
 
 export const CartCreateSchema = z.object({
   belongsTo: z.string(),
@@ -57,31 +53,30 @@ export const CartCreateSchema = z.object({
 
 export const CartReadSchema = CartCreateSchema;
 
-export const PartCreateSchema = z.object({
-  id: z.string(),
+export const PartSchema = z.object({
+  id: z.string().optional(),
   category: z.string(),
-  subCategory: z.string().optional(),
   model: z.array(z.string()),
-  usedFor: z.array(z.string()),
-  brand: z.string(),
-  suitableFor: z.array(z.string()),
+  usedFor: z.array(z.string()).optional(),
+  brand: z.string().optional(),
+  properties: z.string().optional(),
   sale: z.object({
-    purchasePrice: z.number().positive(),
-    interestRates: z.number().min(0, "Interest rates should be at least 0"),
+    buyPrice: z.number().positive(),
+    vat: z.number().positive().min(0, "vat should be at least 0"),
     updatedAt: z.date(),
   }),
   warehouse: z.object({
     stock: z.number(),
-    placehold: z.string().optional(),
-    warnAt: z.number().optional(),
+    address: z.string().optional(),
+    initialStock: z.number(),
     updatedAt: z.date(),
   }),
   description: z.string().optional(),
-  notices: z.array(z.string()).optional(),
-  imageUrls: z.array(z.string()),
+  notes: z.array(z.string()).optional(),
+  imageUrls: z.array(z.string()).min(1, "at least one image is required"),
 });
 
-export const AggregatedPartSchama = PartCreateSchema.omit({
+export const AggregatedPartSchema = PartSchema.omit({
   warehouse: true,
   sale: true,
 }).merge(
@@ -93,7 +88,7 @@ export const AggregatedPartSchama = PartCreateSchema.omit({
 
 export const AggregatedCartSchema = z.array(
   z.object({
-    partDetails: AggregatedPartSchama.omit({
+    partDetails: AggregatedPartSchema.omit({
       id: true,
       imageUrls: true,
       description: true,
@@ -132,7 +127,7 @@ export const AggregatedSuggestionsSchema = z.array(
     imageUrl: z.string(),
     profession: Profession,
     parts: z.array(
-      PartCreateSchema.pick({
+      PartSchema.pick({
         id: true,
         model: true,
         brand: true,
@@ -146,11 +141,12 @@ export const AggregatedSuggestionsSchema = z.array(
 );
 
 export const OrderStatus = z.enum([
-  "CONFIRMING",
-  "CONFIRMED",
-  "CANCELED_BY_USER",
-  "CANCELED_BY_ADMIN",
-  "COMPLETED",
+  "در انتظار تایید",
+  "تایید شده و در حال ارسال",
+  "لغو شده توسط مشتری",
+  "رد شده توسط ادمین",
+  "تکمیل شده",
+  "برگشت خورده",
 ]);
 
 export const OrderCreateSchema = z
@@ -170,7 +166,7 @@ export const AggregatedOrderSchema = OrderCreateSchema.omit({
 }).merge(
   z.object({
     items: z.array(
-      AggregatedPartSchama.omit({
+      AggregatedPartSchema.omit({
         id: true,
         imageUrls: true,
         description: true,
@@ -198,8 +194,7 @@ export const AggregatedOrderSchema = OrderCreateSchema.omit({
 // ----------------- Types here --------------
 
 export const UserSchema = z.object({
-  name: z.string(),
-  family: z.string(),
+  fullname: z.string(),
   phone: z.string(),
   profession: Profession,
   address: z.string(),
@@ -207,8 +202,9 @@ export const UserSchema = z.object({
 
 export type AuthSessionData = {
   phone?: string;
-  code?: string;
-  sentAt?: number;
+  code?: number;
+  resendOn?: Date;
+  timesAttempted?: number;
 };
 
 export type UserSessionData = {

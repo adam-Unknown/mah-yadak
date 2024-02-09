@@ -2,93 +2,99 @@
 import { userSessionOptions } from "@/session.config";
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { z } from "zod";
 import {
-  cancelOrder,
   createOrder,
   fetchCart,
-  fetchOrderable,
+  fetchCartOrdability,
+  fetchStoreStatus,
   getMongoDbCrudExecutor,
+  getUserSession,
   isCancelableOrder,
-  updatePart,
+  updateOrderCancelation,
 } from "../data";
-import { State, UserSessionData } from "../definition";
+import { ActionResultType } from "./cart";
+import { ObjectId } from "mongodb";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
-interface OrderFormState extends State<void> {}
-
-export async function orderAction(
-  prevState: OrderFormState | undefined,
-  formData: FormData
-): Promise<OrderFormState | undefined> {
+export async function order(invoice: {
+  orderer: boolean;
+  customer: boolean;
+}): Promise<ActionResultType & { redirectTo?: string }> {
   const {
     user: { phone },
-  } = await getIronSession<UserSessionData>(cookies(), userSessionOptions);
+  } = await getUserSession();
 
-  const orderable = await fetchOrderable({
+  const storeState = await fetchStoreStatus();
+
+  if (!storeState.store || !storeState.servicing)
+    return {
+      success: false,
+      message: "فروشگاه در حال حاضر بسته است.",
+    };
+
+  const orderable = await fetchCartOrdability({
     belongsTo: phone,
   });
 
-  if (!orderable) return { formErrors: ["Not orderable"] };
-
-  const cart = await fetchCart({ belongsTo: phone });
-  //  TODO: GET BACKUP FOR THE PARTS BEFORE UPDATING THEM
-  // UPDATE THE PARTS
-  for (const item of cart.items) await updatePart(item);
-  try {
-  } catch (e) {
-    return { formErrors: ["Not updated x1"] };
-  }
-
-  // DELETE THE CART
-  try {
-    await getMongoDbCrudExecutor("carts", async (carts) =>
-      carts.deleteOne({ belongsTo: phone })
-    )();
-  } catch (e) {
-    // RECOVERY THE PARTS
-    return {};
-  }
-
-  // CREATE THE ORDER
-  try {
-    const orderId = await createOrder({
-      cart: cart,
-      invoicesPrint: { cooperate: false, customer: false },
-    });
-    
-    redirect(`/dashboard/orders/${orderId}`);
-  } catch (e) {
-    // RECOVERY THE PARTS
-  }
-}
-
-interface CancelOrderFormState extends State<void> {}
-
-export const cancelOrderAction = async (
-  prevState: CancelOrderFormState | undefined,
-  formData: FormData
-): Promise<CancelOrderFormState | undefined> => {
-  const validatedFields = z.string().safeParse(formData.get("orderId"));
-
-  if (!validatedFields.success)
+  if (!orderable)
     return {
-      formErrors: ["Invalid order id"],
+      success: false,
+      message: "در سبد خرید شما مغاییرتی ایجاد شده است.",
     };
 
-  if (!(await isCancelableOrder({ orderId: validatedFields.data })))
+  const cart = await fetchCart({ belongsTo: phone });
+
+  // DECREASE THE STOCK OF THE PARTS
+  await getMongoDbCrudExecutor("parts", async (parts) =>
+    parts.bulkWrite(
+      cart.items.map((item) => ({
+        updateOne: {
+          filter: { _id: new ObjectId(item.partId) },
+          update: { $inc: { "warehouse.stock": -item.quantity } },
+        },
+      }))
+    )
+  )();
+
+  // DELETE THE CART
+  await getMongoDbCrudExecutor("carts", async (carts) =>
+    carts.deleteOne({ belongsTo: phone })
+  )();
+
+  const orderId = await createOrder({
+    cart: cart,
+    invoicesToPrint: invoice,
+  });
+
+  return {
+    success: true,
+    message: "سفارش شما با موفقیت ثبت شد.",
+    redirectTo: `/dashboard/orders/${orderId}`,
+  };
+}
+
+export const cancelOrder = async (id: string): Promise<ActionResultType> => {
+  if (!(await isCancelableOrder(id)))
     return {
-      formErrors: ["Order is not cancelable"],
+      success: false,
+      message: "سفارش قابل لغو نمی باشد و در حال پردازش است.",
     };
 
   const {
     user: { phone },
-  } = await getIronSession<UserSessionData>(cookies(), userSessionOptions);
+  } = await getUserSession();
 
-  if (!(await cancelOrder({ belongsTo: phone, orderId: validatedFields.data })))
+  if (!(await updateOrderCancelation({ orderId: id, belongsTo: phone })))
     return {
-      formErrors: ["Failed to cancel the order"],
+      success: false,
+      message: "سفارش شما لغو نشد.",
     };
 
-  redirect("/dashboard/orders");
+  revalidatePath("/dashboard/orders");
+
+  return {
+    success: true,
+    message: "سفارش شما با موفقیت لغو گردید.",
+  };
 };

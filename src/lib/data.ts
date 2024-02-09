@@ -2,7 +2,7 @@
 import { Collection, MongoClient, ObjectId } from "mongodb";
 import {
   UserSessionData,
-  AggregatedPartSchama,
+  AggregatedPartSchema,
   UserSchema,
   OrderCreateSchema,
   CartItemEditForm,
@@ -17,6 +17,9 @@ import { cookies } from "next/headers";
 import { userSessionOptions } from "@/session.config";
 import { AggregatedSuggestionsSchema } from "./definition";
 import { z } from "zod";
+import { cartItemTypeInTable } from "@/components/cart/column-def";
+import { ordersInTableType } from "@/components/order/column-def";
+import { OrderItemsInTableType } from "../components/order/details/column-def";
 export const getMongoDbCrudExecutor =
   <T = any, U = void>(
     collection: string,
@@ -39,9 +42,9 @@ export const fetchUser = getMongoDbCrudExecutor<
   z.infer<typeof UserSchema>,
   string
 >("accounts", async (accounts, phone) =>
-  UserSchema.parse(
-    await accounts.findOne({ phone: phone }, { projection: { _id: 0 } })
-  )
+  accounts
+    .findOne({ phone: phone }, { projection: { _id: 0 } })
+    .then((r) => UserSchema.parse(r))
 );
 
 export const getUserSession = async () =>
@@ -56,7 +59,7 @@ export const isRegistered = getMongoDbCrudExecutor<boolean, string>(
 );
 
 export const fetchPart = getMongoDbCrudExecutor<
-  z.infer<typeof AggregatedPartSchama>,
+  z.infer<typeof AggregatedPartSchema>,
   { belongsTo?: string; partId: string }
 >("parts", async (Parts, { belongsTo, partId }) =>
   Parts.aggregate([
@@ -89,10 +92,10 @@ export const fetchPart = getMongoDbCrudExecutor<
     },
   ])
     .toArray()
-    .then((res) => AggregatedPartSchama.parse(res[0]))
+    .then((res) => AggregatedPartSchema.parse(res[0]))
 );
 
-export const updatePart = getMongoDbCrudExecutor<
+export const deductPart = getMongoDbCrudExecutor<
   boolean,
   { partId: string; quantity: number }
 >("parts", async (parts, { partId, quantity }) =>
@@ -108,56 +111,6 @@ export const updatePart = getMongoDbCrudExecutor<
       }
     )
     .then((r) => !!r.modifiedCount)
-);
-
-export const fetchSuggestions = getMongoDbCrudExecutor(
-  "suggestions",
-  async (Suggessions) =>
-    Suggessions.aggregate([
-      {
-        $lookup: {
-          from: "parts",
-          let: {
-            suggestion_part_ids: "$partIds",
-          },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $in: [
-                    "$_id",
-                    {
-                      $map: {
-                        input: "$$suggestion_part_ids",
-                        as: "partId",
-                        in: {
-                          $toObjectId: "$$partId",
-                        },
-                      },
-                    },
-                  ],
-                },
-              },
-            },
-            {
-              $project: {
-                id: { $toString: "$_id" },
-                imageUrl: { $arrayElemAt: ["$imageUrls", 0] },
-                category: 1,
-                model: 1,
-                brand: 1,
-                "sale.salesPrice": 1,
-                usedFor: 1,
-                suitableFor: 1,
-              },
-            },
-          ],
-          as: "parts",
-        },
-      },
-    ])
-      .toArray()
-      .then((r) => AggregatedSuggestionsSchema.parse(r))
 );
 
 export const fetchPartAvailability = getMongoDbCrudExecutor<
@@ -231,13 +184,9 @@ export const fetchPartAvailability = getMongoDbCrudExecutor<
             {
               $match: {
                 $expr: {
-                  $not: [
-                    {
-                      $in: [
-                        "$status",
-                        ["CANCELED_BY_USER", "CANCELED_BY_ADMIN", "COMPLETED"],
-                      ],
-                    },
+                  $in: [
+                    "$status",
+                    ["تایید شده و در حال ارسال", "در انتظار تایید"],
                   ],
                 },
               },
@@ -307,7 +256,7 @@ export const addToCart = getMongoDbCrudExecutor<
     )
     .then((res) => {
       if (!res.acknowledged) return false;
-      if (res.matchedCount !== 0) return true;
+      if (res.modifiedCount !== 0) return true;
 
       return carts
         .updateOne(
@@ -324,7 +273,7 @@ export const addToCart = getMongoDbCrudExecutor<
             upsert: true,
           }
         )
-        .then((res) => !!res.modifiedCount);
+        .then((res) => !!res.matchedCount || !!res.upsertedCount);
     })
 );
 
@@ -336,85 +285,216 @@ export const fetchCart = getMongoDbCrudExecutor<
 );
 
 export const fetchCartWithDetails = getMongoDbCrudExecutor<
-  z.infer<typeof AggregatedCartSchema>,
+  cartItemTypeInTable[],
   { belongsTo: string }
->("carts", async (cart, { belongsTo }) =>
-  cart
-    .aggregate([
-      {
-        $match: {
-          belongsTo: belongsTo,
-        },
-      },
-      {
-        $unwind: {
-          path: "$items",
-        },
-      },
-      {
-        $lookup: {
-          from: "parts",
-          let: {
-            item: {
-              partId: {
-                $toObjectId: "$items.partId",
-              },
-              qty: "$items.quantity",
-            },
-          },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $eq: ["$_id", "$$item.partId"],
-                },
-              },
-            },
-            {
-              $project: {
-                _id: 0,
-                id: { $toString: "$_id" },
-                brand: 1,
-                price: {
-                  $multiply: ["$sale.purchasePrice", "$sale.interestRates"],
-                },
-                imageUrl: {
-                  $arrayElemAt: ["$imageUrls", 0],
-                },
-                model: {
-                  $arrayElemAt: ["$model", 0],
-                },
-                usedFor: {
-                  $arrayElemAt: ["$usedFor", 0],
-                },
-                suitableFor: {
-                  $arrayElemAt: ["$suitableFor", 0],
-                },
-                isInStock: { $gte: ["$warehouse.stock", "$$item.qty"] },
-              },
-            },
-          ],
-          as: "partDetails",
-        },
-      },
-      {
-        $unwind: {
-          path: "$partDetails",
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          partDetails: 1,
-          quantity: "$items.quantity",
-          totalPrice: {
-            $multiply: ["$partDetails.price", "$items.quantity"],
+>(
+  "carts",
+  async (cart, { belongsTo }) =>
+    cart
+      .aggregate([
+        {
+          $match: {
+            belongsTo: belongsTo,
           },
         },
-      },
-    ])
-    .toArray()
-    .then((cart) => AggregatedCartSchema.parse(cart))
+        {
+          $unwind: {
+            path: "$items",
+          },
+        },
+        {
+          $lookup: {
+            from: "parts",
+            let: {
+              item: {
+                partId: {
+                  $toObjectId: "$items.partId",
+                },
+                qty: "$items.quantity",
+              },
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$_id", "$$item.partId"],
+                  },
+                },
+              },
+              {
+                $lookup: {
+                  from: "orders",
+                  let: {
+                    partId: {
+                      $toString: "$_id",
+                    },
+                  },
+                  pipeline: [
+                    {
+                      $match: {
+                        $expr: {
+                          $in: [
+                            "$status",
+                            ["تایید شده و در حال ارسال", "در انتظار تایید"],
+                          ],
+                        },
+                      },
+                    },
+                    {
+                      $unwind: {
+                        path: "$items",
+                      },
+                    },
+                    {
+                      $match: {
+                        $expr: {
+                          $and: [
+                            {
+                              $eq: ["$items.partId", "$$partId"],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                    {
+                      $project: {
+                        quantity: "$items.quantity",
+                      },
+                    },
+                  ],
+                  as: "withinOrderProcessing",
+                },
+              },
+              {
+                $addFields: {
+                  withinOrderProcessing: {
+                    $sum: ["$withinOrderProcessing.quantity"],
+                  },
+                },
+              },
+              {
+                $project: {
+                  _id: 0,
+                  id: { $toString: "$_id" },
+                  imageUrl: { $first: "$imageUrls" },
+                  name: {
+                    $reduce: {
+                      input: {
+                        $concatArrays: [
+                          {
+                            $split: [
+                              {
+                                $concat: [
+                                  {
+                                    $cond: {
+                                      if: {
+                                        $gt: [{ $size: "$model" }, 0],
+                                      },
+                                      then: {
+                                        $first: "$model",
+                                      },
+                                      else: "",
+                                    },
+                                  },
+                                  " ",
+                                ],
+                              },
+                              "nonexistentSeparator",
+                            ],
+                          },
+                          {
+                            $cond: {
+                              if: { $ne: ["$properties", ""] },
+                              then: {
+                                $split: [
+                                  {
+                                    $concat: ["$properties", " "],
+                                  },
+                                  "nonexistentSeparator",
+                                ],
+                              },
+                              else: {
+                                $split: ["", "nonexistentSeparator"],
+                              },
+                            },
+                          },
+                          {
+                            $split: [
+                              {
+                                $concat: [
+                                  {
+                                    $cond: {
+                                      if: {
+                                        $gt: [{ $size: "$usedFor" }, 0],
+                                      },
+                                      then: {
+                                        $first: "$usedFor",
+                                      },
+                                      else: "",
+                                    },
+                                  },
+                                  " ",
+                                ],
+                              },
+                              "nonexistentSeparator",
+                            ],
+                          },
+                          {
+                            $cond: {
+                              if: { $ne: ["$brand", ""] },
+                              then: {
+                                $split: [
+                                  { $concat: ["$brand", " "] },
+                                  "nonexistentSeparator",
+                                ],
+                              },
+                              else: {
+                                $split: ["", "nonexistentSeparator"],
+                              },
+                            },
+                          },
+                        ],
+                      },
+                      initialValue: "",
+                      in: { $concat: ["$$value", "$$this"] },
+                    },
+                  },
+                  price: {
+                    $multiply: ["$sale.buyPrice", "$sale.vat"],
+                  },
+                  isAvalibale: {
+                    $gte: [
+                      "$warehouse.stock",
+                      { $sum: ["$$item.qty", "$withinOrderProcessing"] },
+                    ],
+                  },
+                },
+              },
+            ],
+            as: "partDetails",
+          },
+        },
+        {
+          $unwind: {
+            path: "$partDetails",
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            id: "$partDetails.id",
+            isAvalibale: "$partDetails.isAvalibale",
+            name: "$partDetails.name",
+            imageUrl: "$partDetails.imageUrl",
+            price: "$partDetails.price",
+            quantity: "$items.quantity",
+            total: {
+              $multiply: ["$partDetails.price", "$items.quantity"],
+            },
+          },
+        },
+      ])
+      .toArray() as Promise<cartItemTypeInTable[]>
 );
 
 export const editCartItem = getMongoDbCrudExecutor<
@@ -454,7 +534,7 @@ export const removeCartItem = getMongoDbCrudExecutor<
     .then((res) => !!res.modifiedCount)
 );
 
-export const fetchOrderable = getMongoDbCrudExecutor<
+export const fetchCartOrdability = getMongoDbCrudExecutor<
   boolean,
   { belongsTo: string }
 >("carts", async (carts, { belongsTo }) =>
@@ -466,73 +546,143 @@ export const fetchOrderable = getMongoDbCrudExecutor<
         },
       },
       {
-        $unwind: { path: "$items" },
+        $unwind: {
+          path: "$items",
+        },
       },
       {
         $lookup: {
           from: "parts",
           let: {
-            item: {
-              partId: {
-                $toObjectId: "$items.partId",
-              },
-              qty: "$items.quantity",
-            },
+            partId: "$items.partId",
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $eq: ["$_id", "$$item.partId"],
+                  $eq: [
+                    "$_id",
+                    {
+                      $toObjectId: "$$partId",
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                quantity: {
+                  $first: "$warehouse.stock",
+                },
+              },
+            },
+          ],
+          as: "stock",
+        },
+      },
+      {
+        $addFields: {
+          stock: "$stock.quantity",
+        },
+      },
+      {
+        $unwind: {
+          path: "$stock",
+        },
+      },
+      {
+        $lookup: {
+          from: "orders",
+          let: {
+            partId: "$items.partId",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: [
+                    "$status",
+                    ["تایید شده و در حال ارسال", "در انتظار تایید"],
+                  ],
+                },
+              },
+            },
+            {
+              $unwind: {
+                path: "$items",
+              },
+            },
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    {
+                      $eq: ["$items.partId", "$$partId"],
+                    },
+                  ],
                 },
               },
             },
             {
               $project: {
-                _id: 0,
-                salable: { $gte: ["$warehouse.stock", "$$item.qty"] },
+                quantity: "$items.quantity",
               },
             },
           ],
-          as: "status",
+          as: "withinOrderProcessing",
+        },
+      },
+      {
+        $addFields: {
+          withinOrderProcessing: {
+            $sum: ["$withinOrderProcessing.quantity"],
+          },
+        },
+      },
+      {
+        $unwind: {
+          path: "$withinOrderProcessing",
         },
       },
       {
         $project: {
-          status: 1,
+          isOrdable: {
+            $gte: [
+              "$stock",
+              {
+                $sum: ["$withinOrderProcessing", "$items.quantity"],
+              },
+            ],
+          },
         },
-      },
-      {
-        $unwind: { path: "$status" },
       },
     ])
     .toArray()
-    .then((res) => {
-      return res.every((r) => r.status.salable);
-    })
+    .then((r) => r.reduce((acc, cur) => acc && cur.isOrdable, true))
 );
 
 export const createOrder = getMongoDbCrudExecutor<
   string,
   {
     cart: z.infer<typeof CartReadSchema>;
-    invoicesPrint: { cooperate: boolean; customer: boolean };
+    invoicesToPrint: { orderer: boolean; customer: boolean };
   }
->("orders", async (orders, { cart, invoicesPrint }) =>
+>("orders", async (orders, { cart, invoicesToPrint }) =>
   orders
     .insertOne({
       ...cart,
-      status: "CONFIRMING",
+      status: "در انتظار تایید",
       createdAt: new Date(),
       updatedAt: new Date(),
-      cooperatesInvoicePrint: invoicesPrint.cooperate,
-      customerInvoicePrint: invoicesPrint.customer,
-    } satisfies z.infer<typeof OrderCreateSchema>)
+      customerInvoiceToPrint: invoicesToPrint.customer,
+      ordererInvoiceToPrint: invoicesToPrint.orderer,
+    })
     .then((r) => r.insertedId.toHexString())
 );
 
 export const fetchOrderDetails = getMongoDbCrudExecutor<
-  z.infer<typeof AggregatedOrderSchema>,
+  any,
   { belongsTo: string; orderId: string }
 >("orders", async (orders, { belongsTo, orderId }) =>
   orders
@@ -576,26 +726,97 @@ export const fetchOrderDetails = getMongoDbCrudExecutor<
             {
               $project: {
                 _id: 0,
-                id: {
-                  $toString: "$_id",
-                },
-                brand: 1,
-                price: {
-                  $multiply: ["$sale.purchasePrice", "$sale.interestRates"],
-                },
-                imageUrl: {
-                  $arrayElemAt: ["$imageUrls", 0],
-                },
-                model: {
-                  $arrayElemAt: ["$model", 0],
-                },
-                usedFor: {
-                  $arrayElemAt: ["$usedFor", 0],
-                },
-                suitableFor: {
-                  $arrayElemAt: ["$suitableFor", 0],
+                id: { $toString: "$_id" },
+                imageUrl: { $first: "$imageUrls" },
+                name: {
+                  $reduce: {
+                    input: {
+                      $concatArrays: [
+                        {
+                          $split: [
+                            {
+                              $concat: [
+                                {
+                                  $cond: {
+                                    if: {
+                                      $gt: [{ $size: "$model" }, 0],
+                                    },
+                                    then: {
+                                      $first: "$model",
+                                    },
+                                    else: "",
+                                  },
+                                },
+                                " ",
+                              ],
+                            },
+                            "nonexistentSeparator",
+                          ],
+                        },
+                        {
+                          $cond: {
+                            if: { $ne: ["$properties", ""] },
+                            then: {
+                              $split: [
+                                {
+                                  $concat: ["$properties", " "],
+                                },
+                                "nonexistentSeparator",
+                              ],
+                            },
+                            else: {
+                              $split: ["", "nonexistentSeparator"],
+                            },
+                          },
+                        },
+                        {
+                          $split: [
+                            {
+                              $concat: [
+                                {
+                                  $cond: {
+                                    if: {
+                                      $gt: [{ $size: "$usedFor" }, 0],
+                                    },
+                                    then: {
+                                      $first: "$usedFor",
+                                    },
+                                    else: "",
+                                  },
+                                },
+                                " ",
+                              ],
+                            },
+                            "nonexistentSeparator",
+                          ],
+                        },
+                        {
+                          $cond: {
+                            if: { $ne: ["$brand", ""] },
+                            then: {
+                              $split: [
+                                { $concat: ["$brand", " "] },
+                                "nonexistentSeparator",
+                              ],
+                            },
+                            else: {
+                              $split: ["", "nonexistentSeparator"],
+                            },
+                          },
+                        },
+                      ],
+                    },
+                    initialValue: "",
+                    in: { $concat: ["$$value", "$$this"] },
+                  },
                 },
                 quantity: "$$item.quantity",
+                price: {
+                  $multiply: ["$sale.buyPrice", "$sale.vat"],
+                },
+                total: {
+                  $multiply: ["$sale.buyPrice", "$sale.vat", "$$item.quantity"],
+                },
               },
             },
           ],
@@ -612,50 +833,47 @@ export const fetchOrderDetails = getMongoDbCrudExecutor<
           status: { $first: "$status" },
           createdAt: { $first: "$createdAt" },
           updatedAt: { $first: "$updatedAt" },
-          cooperatesInvoicePrint: { $first: "$cooperatesInvoicePrint" },
-          customerInvoicePrint: { $first: "$customerInvoicePrint" },
+          totalPrice: { $sum: "$items.total" },
+          customerInvoiceToPrint: { $first: "$customerInvoiceToPrint" },
+          ordererInvoiceToPrint: { $first: "$ordererInvoiceToPrint" },
         },
       },
     ])
     .next()
-    .then((order) => {
-      return AggregatedOrderSchema.parse(order);
-    })
 );
 
 export const fetchOrders = getMongoDbCrudExecutor<
-  z.infer<typeof OrdersReadSchema>,
-  { belongsTo: string }
->("orders", async (orders, { belongsTo }) =>
-  orders
-    .aggregate([
-      {
-        $match: {
-          belongsTo: belongsTo,
-        },
-      },
-      {
-        $sort: { createdAt: -1 },
-      },
-    ])
-    .toArray()
-    .then((orders) =>
-      OrdersReadSchema.parse(
-        orders.map((order) => ({ ...order, id: order._id.toString() }))
-      )
-    )
+  ordersInTableType[],
+  { belongsTo: string; skip: number; limit: number }
+>(
+  "orders",
+  async (orders, { belongsTo, skip, limit }) =>
+    orders
+      .find({
+        belongsTo: belongsTo,
+      })
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .project({
+        _id: 0,
+        id: { $toString: "$_id" },
+        status: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      })
+      .toArray() as Promise<ordersInTableType[]>
 );
 
-export const isCancelableOrder = getMongoDbCrudExecutor<
-  boolean,
-  { orderId: string }
->("orders", async (orders, { orderId }) =>
-  orders
-    .findOne({ _id: new ObjectId(orderId) })
-    .then((r) => OrderStatus.parse(r?.status) === "CONFIRMING")
+export const isCancelableOrder = getMongoDbCrudExecutor<boolean, string>(
+  "orders",
+  async (orders, orderId) =>
+    orders
+      .findOne({ _id: new ObjectId(orderId) })
+      .then((r) => OrderStatus.parse(r?.status) === "در انتظار تایید")
 );
 
-export const cancelOrder = getMongoDbCrudExecutor<
+export const updateOrderCancelation = getMongoDbCrudExecutor<
   boolean,
   { belongsTo: string; orderId: string }
 >("orders", async (orders, { belongsTo, orderId }) =>
@@ -664,10 +882,18 @@ export const cancelOrder = getMongoDbCrudExecutor<
       { _id: new ObjectId(orderId), belongsTo },
       {
         $set: {
-          status: "CANCELED_BY_USER",
+          status: OrderStatus.Values["لغو شده توسط مشتری"],
           updatedAt: new Date(),
         },
       }
     )
     .then((r) => !!r.modifiedCount)
+);
+
+export const fetchStoreStatus = getMongoDbCrudExecutor(
+  "store-status",
+  async (storeStatus) =>
+    storeStatus
+      .findOne({})
+      .then((r) => r as { store?: boolean; servicing?: boolean })
 );

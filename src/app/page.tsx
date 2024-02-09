@@ -12,7 +12,7 @@ export default async function index() {
   return (
     <>
       {/* TEST */}
-      {user ? <p>{user.name}</p> : <a href="/login">login</a>}
+      {user ? <p>{user.fullname}</p> : <a href="/login">login</a>}
       {/* TEST */}
       <h1>سلام دنیا</h1>
       <p>معرفی سایت</p>

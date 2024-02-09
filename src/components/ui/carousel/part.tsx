@@ -9,6 +9,7 @@ import {
   Carousel,
 } from "../carousel";
 import Image from "next/image";
+import { Dot } from "lucide-react";
 
 interface CarouselProps {
   imagesUrls: string[];
@@ -30,36 +31,35 @@ const PartCarousel: React.FC<CarouselProps> = ({ imagesUrls }) => {
     });
   }, [api]);
   return (
-    <div>
-      <Carousel
-        setApi={setApi}
-        opts={{ align: "center" }}
-        className="bg-green-400"
-      >
-        <CarouselContent>
-          {imagesUrls.map((url, index) => (
-            <React.Fragment key={index}>
-              <CarouselItem>
-                <Image
-                  width={500}
-                  height={500}
-                  src={url}
-                  alt="test"
-                  className="aspect-square bg-orange-600"
-                />
-              </CarouselItem>
-            </React.Fragment>
-          ))}
-        </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
-      </Carousel>
-      <div className="flex justify-center items-center space-x-2">
-        <span>
-          {current} of {count}
-        </span>
+    <Carousel
+      setApi={setApi}
+      opts={{ align: "center" }}
+      className="overflow-hidden border border-primary rounded-sm"
+      dir="ltr"
+    >
+      <CarouselContent>
+        {imagesUrls.map((url, index) => (
+          <React.Fragment key={index}>
+            <CarouselItem>
+              <Image
+                width={500}
+                height={500}
+                src={url}
+                alt="x"
+                className="aspect-square w-full"
+              />
+            </CarouselItem>
+          </React.Fragment>
+        ))}
+      </CarouselContent>
+      <CarouselPrevious className="hidden md:block" />
+      <CarouselNext className="hidden md:block" />
+      <div className="flex">
+        <small className="mx-auto my-2 inline text-gray-400">{`تصویر ${current.toLocaleString(
+          "fa-IR"
+        )} از ${count.toLocaleString("fa-IR")}`}</small>
       </div>
-    </div>
+    </Carousel>
   );
 };
 

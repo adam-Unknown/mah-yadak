@@ -4,7 +4,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "dkstatics-public.digikala.com",
+        hostname: "xer0.storage.iran.liara.space",
         port: "",
         pathname: "/**",
       },

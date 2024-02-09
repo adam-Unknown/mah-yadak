@@ -2,156 +2,231 @@
 
 import { z } from "zod";
 import {
-  AddToCartFormSchema,
-  CartCreateSchema,
-  CartItemEditForm,
-  CartReadSchema,
-  ItemLineSchema,
-  OrderCreateSchema,
-  State,
-  UserSessionData,
-} from "../definition";
-import { userSessionOptions } from "@/session.config";
-import { getIronSession } from "iron-session";
-import {
   addToCart,
   editCartItem,
-  fetchCart,
-  fetchOrderable,
   fetchPartAvailability,
   getMongoDbCrudExecutor,
   getUserSession,
   removeCartItem,
 } from "../data";
 import { ObjectId } from "mongodb";
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cartItemSchema } from "@/components/cart/edit-cart";
 
-interface AddToCartFormState
-  extends State<z.infer<typeof AddToCartFormSchema>> {}
-
-/* THIS NEED BE PROTECTED BY MIDDLEWARE!!!! */
-export const addItemAction = async (
-  prevState: AddToCartFormState | undefined,
-  formData: FormData
-): Promise<AddToCartFormState | undefined> => {
-  //  validating the formData
-  const validatedFields = AddToCartFormSchema.safeParse({
-    partId: formData.get("partId"),
-    quantity: formData.get("quantity"),
-  });
-
-  if (!validatedFields.success)
-    return {
-      fieldErrors: validatedFields.error.flatten().fieldErrors,
-    };
-
-  const {
-    user: { phone },
-  } = await getIronSession<UserSessionData>(cookies(), userSessionOptions);
-
-  const isAvailable = await fetchPartAvailability({
-    belongsTo: phone,
-    ...validatedFields.data,
-  });
-
-  if (!isAvailable)
-    return {
-      fieldErrors: {
-        quantity: ["Not enough stock"],
-      },
-    };
-
-  // Add the part to the cart
-  const success = await addToCart({
-    belongsTo: phone,
-    ...validatedFields.data,
-  });
-
-  if (!success)
-    return {
-      fieldErrors: {
-        quantity: ["Not added"],
-      },
-    };
+export type ActionResultType = {
+  success: boolean;
+  message: string;
 };
 
-interface EditFormState extends State<z.infer<typeof CartItemEditForm>> {}
-
-export async function editItemAction(
-  prevState: EditFormState | undefined,
-  formData: FormData
-): Promise<EditFormState | undefined> {
-  const validatedFields = CartItemEditForm.safeParse({
-    partId: formData.get("partId"),
-    quantity: formData.get("quantity"),
-  });
-
-  if (!validatedFields.success) {
-    return {
-      fieldErrors: validatedFields.error.flatten().fieldErrors,
-    };
-  }
-
+export async function addItemToCart(
+  item: z.infer<typeof cartItemSchema>
+): Promise<ActionResultType> {
   const {
     user: { phone },
   } = await getUserSession();
 
-  const salable = await fetchPartAvailability({
-    belongsTo: "!",
-    ...validatedFields.data,
-  });
-  if (!salable)
-    return {
-      fieldErrors: {
-        quantity: ["Not enough stock"],
-      },
-    };
-
-  const edited = await editCartItem({
+  const isAvailable = await fetchPartAvailability({
     belongsTo: phone,
-    ...validatedFields.data,
+    ...item,
   });
 
-  if (!edited)
+  if (!isAvailable) {
     return {
-      fieldErrors: {
-        quantity: ["Not Edited"],
-      },
-    };
-
-  redirect("/store/cart");
-}
-
-const CartItemRemoveForm = z.object({
-  partId: z.string(),
-});
-
-interface RemoveFormState extends State<z.infer<typeof CartItemRemoveForm>> {}
-
-export async function removeItemAction(
-  prevState: RemoveFormState | undefined,
-  formData: FormData
-): Promise<RemoveFormState | undefined> {
-  const validatedFields = CartItemRemoveForm.safeParse({
-    partId: formData.get("partId"),
-  });
-
-  if (!validatedFields.success) {
-    return {
-      fieldErrors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+      message: "متاسفانه در انبار به میزان درخواستی شما موجود نمی باشد.",
     };
   }
 
+  if (!(await addToCart({ belongsTo: phone, ...item })))
+    return {
+      success: false,
+      message: "متاسفانه محصول به سبد خرید شما اضافه نشد.",
+    };
+
+  return { success: true, message: "با موفقیت به سبد خرید شما اضافه گردید." };
+}
+
+export async function editItemInCart(
+  item: z.infer<typeof cartItemSchema>
+): Promise<ActionResultType> {
   const {
     user: { phone },
-  } = await getIronSession<UserSessionData>(cookies(), userSessionOptions);
+  } = await getUserSession();
 
-  const removed = await removeCartItem({
+  const _fetchPartAvailability = getMongoDbCrudExecutor<
+    boolean,
+    { belongsTo: string; partId: string; quantity: number }
+  >("parts", async (parts, { belongsTo, partId, quantity }) =>
+    parts
+      .aggregate([
+        {
+          $match: {
+            _id: new ObjectId(partId),
+          },
+        },
+        {
+          $lookup: {
+            from: "carts",
+            let: {
+              partId: {
+                $toString: "$_id",
+              },
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      {
+                        $eq: ["$belongsTo", belongsTo],
+                      },
+                    ],
+                  },
+                },
+              },
+              {
+                $unwind: {
+                  path: "$items",
+                },
+              },
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$items.partId", "$$partId"],
+                  },
+                },
+              },
+              {
+                $project: {
+                  quantity: "$items.quantity",
+                },
+              },
+            ],
+            as: "withinCart",
+          },
+        },
+        {
+          $addFields: {
+            withinCart: {
+              $sum: ["$withinCart.quantity"],
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: "orders",
+            let: {
+              partId: {
+                $toString: "$_id",
+              },
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $in: [
+                      "$status",
+                      ["تایید شده و در حال ارسال", "در انتظار تایید"],
+                    ],
+                  },
+                },
+              },
+              {
+                $unwind: {
+                  path: "$items",
+                },
+              },
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      {
+                        $eq: ["$items.partId", "$$partId"],
+                      },
+                    ],
+                  },
+                },
+              },
+              {
+                $project: {
+                  quantity: "$items.quantity",
+                },
+              },
+            ],
+            as: "withinOrderProcessing",
+          },
+        },
+        {
+          $addFields: {
+            withinOrderProcessing: {
+              $sum: ["$withinOrderProcessing.quantity"],
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            isAvailable: {
+              $gte: [
+                "$warehouse.stock",
+                {
+                  $sum: ["$withinOrderProcessing", quantity],
+                },
+              ],
+            },
+          },
+        },
+      ])
+      .next()
+      .then((r) => !!r?.isAvailable)
+  );
+
+  const salable = await _fetchPartAvailability({
     belongsTo: phone,
-    partId: validatedFields.data.partId,
+    ...item,
   });
-  console.log(removed);
+  if (!salable)
+    return {
+      success: false,
+      message: "متاسفانه در انبار به میزان درخواستی شما موجود نمی باشد.",
+    };
 
-  redirect("/store/cart");
+  if (
+    !(await editCartItem({
+      belongsTo: phone,
+      ...item,
+    }))
+  )
+    return {
+      success: false,
+      message: "متاسفانه ویرایش انجام نشد.",
+    };
+
+  return {
+    success: true,
+    message: "ویرایش انجام شد.",
+  };
+}
+
+export async function removeItemFromCart(
+  id: string
+): Promise<ActionResultType> {
+  const {
+    user: { phone },
+  } = await getUserSession();
+
+  if (
+    !!(await removeCartItem({
+      belongsTo: phone,
+      partId: id,
+    }))
+  )
+    return {
+      success: true,
+      message: "با موفقیت از سبد خرید شما حذف گردید.",
+    };
+
+  return {
+    success: false,
+    message: "خطا در حذف از سبد خرید شما.",
+  };
 }

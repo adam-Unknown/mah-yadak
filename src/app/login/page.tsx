@@ -1,15 +1,23 @@
-import { PhoneEnterForm } from "@/components/login/phone-enter-form";
-import { VerificationForm } from "@/components/login/verification-form";
-import { getPhone } from "../../lib/actions/auth";
-import { getMsToResend } from "../../lib/actions/auth";
+"use client";
+import { createContext, useState } from "react";
+import { SendForm } from "./send-form";
+import { VerifyForm } from "./verify-form";
 
-export default async function Login() {
-  const phone = await getPhone();
-  const msToResend = await getMsToResend();
+export const revalidate = 1;
+export const msgSentContext = createContext<{ value: boolean; setValue: any }>({
+  value: false,
+  setValue: () => {},
+});
+
+export default function Login() {
+  const [msgSent, setMsgSent] = useState(false);
+
   return (
     <div>
-      <PhoneEnterForm phone={phone} _msToResend={msToResend} />
-      <VerificationForm phone={phone} />
+      <msgSentContext.Provider value={{ value: msgSent, setValue: setMsgSent }}>
+        <SendForm />
+        <VerifyForm />
+      </msgSentContext.Provider>
     </div>
   );
 }

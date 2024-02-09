@@ -9,25 +9,17 @@ import {
   PhoneEnterFormSchema,
   CodeVerifyFormSchema,
   AuthSessionData,
-  MS_TO_RESEND,
   UserSessionData,
   State,
+  SEC_TO_RESEND,
 } from "../definition";
-
-interface PhoneEnterFormState
-  extends State<z.infer<typeof PhoneEnterFormSchema>> {
-  succ?: boolean;
-  ResendError?: string;
-  data?: { msToResend: number };
-}
-
-interface CodeVerifyFormSchema
-  extends State<z.infer<typeof CodeVerifyFormSchema>> {}
+import { generateSmsCode } from "../utils";
+import { ActionResultType } from "./cart";
+import { revalidatePath } from "next/cache";
 
 export const sendCode = async (
-  prevState: PhoneEnterFormState | undefined,
-  formData: FormData
-): Promise<PhoneEnterFormState | undefined> => {
+  phone: string
+): Promise<ActionResultType & { data?: { resendOn: Date } }> => {
   // fetch the session
   const session = await getIronSession<AuthSessionData>(
     cookies(),
@@ -39,55 +31,72 @@ export const sendCode = async (
   // Code is already sent and time to resend is not passed
   if (
     session.code &&
-    session.sentAt &&
-    Date.now() - session.sentAt < MS_TO_RESEND
+    session.resendOn &&
+    new Date(session.resendOn).getTime() > new Date().getTime()
   ) {
     return {
-      succ: false,
-      ResendError: "You can resend the code after 1 minute",
+      success: false,
+      message: "لطفا کمی صبر کنید و سپس مجدد تلاش کنید.",
       data: {
-        msToResend: await getMsToResend(session.sentAt),
+        resendOn: session.resendOn,
       },
     };
   }
 
-  if (!session.phone) {
+  if (phone) {
     //  TODO: check the form fields
-    let validatedFields = PhoneEnterFormSchema.safeParse({
-      phone: formData.get("phone"),
-    });
+    let validatedFields = PhoneEnterFormSchema.safeParse({ phone: phone });
     if (!validatedFields.success) {
       return {
-        formErrors: validatedFields.error.flatten().formErrors,
-        fieldErrors: validatedFields.error.flatten().fieldErrors,
+        success: false,
+        message: "لطفا شماره همراه خود را به درستی وارد کنید!",
       };
     }
 
-    //  TODO: Check if phone is already in the database and belong to a user if is ok the return true otherwise false
+    // check if the phone number is registered
     if (!(await isRegistered(validatedFields.data.phone)))
       return {
-        fieldErrors: { phone: ["Phone number is not registered"] },
+        success: false,
+        message: "شماره همراه وارد شده در سیستم ما ثبت نشده است!",
       };
     session.phone = validatedFields.data.phone;
   }
 
   // generate a VRF code and store it in the session
-  const code = "123456"; // getVrfCode();
-  // TODO: send the code to the user's mobile number
+  const code = generateSmsCode(); // getVrfCode();
+
+  // send the code to the user
+  const smsBody = JSON.stringify({
+    to: session.phone,
+    text: `فروشگاه ماه یدک \nکد تایید شما: ${code}`,
+  });
+  await fetch(
+    "https://console.melipayamak.com/api/send/simple/723526f21e484e6591bd4c2dd3dcf95c",
+    {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: smsBody,
+    }
+  );
   // store in session
   session.code = code;
-  session.sentAt = Date.now();
+  const temp = new Date();
+  temp.setSeconds(temp.getSeconds() + SEC_TO_RESEND);
+  session.resendOn = temp;
   await session.save();
 
   return {
-    succ: true,
+    success: true,
+    message: "کد تایید به شماره همراه شما ارسال شد.",
     data: {
-      msToResend: await getMsToResend(session.sentAt),
+      resendOn: session.resendOn,
     },
   };
 };
 
-export const logout = async () => {
+export const logout = async (redirectTo: string) => {
   const session = await getIronSession<UserSessionData>(
     cookies(),
     userSessionOptions
@@ -95,42 +104,35 @@ export const logout = async () => {
 
   session.destroy();
 
-  return { succ: true };
+  revalidatePath(redirectTo);
 };
 
-export const verify = async (
-  pervState: CodeVerifyFormSchema | undefined,
-  formData: FormData
-): Promise<CodeVerifyFormSchema | undefined> => {
+export const verify = async (code: number): Promise<ActionResultType> => {
   // TODO: in middleware check if the user is logged in
   const authSession = await getIronSession<AuthSessionData>(
     cookies(),
     authSessionOptions
   );
 
-  if (!authSession.phone) return { formErrors: ["Phone number is not set"] };
-
-  //  TODO: check the form fields
-  let validatedFields = CodeVerifyFormSchema.safeParse({
-    code: formData.get("code"),
-  });
-  if (!validatedFields.success) {
+  if (authSession.timesAttempted && authSession.timesAttempted > 6)
     return {
-      formErrors: validatedFields.error.flatten().formErrors,
-      fieldErrors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+      message: "شما بیش از حد تلاش کردید",
     };
-  }
+
+  if (!authSession.phone)
+    return {
+      success: false,
+      message: "خطا, لطفا صفحه رو ریفرش کنید.",
+    };
 
   // verify the code
-  validatedFields = CodeVerifyFormSchema.refine(({ code }) => {
-    return authSession.code === code;
-  }, "Code is invalid").safeParse({
-    code: formData.get("code"),
-  });
-  if (!validatedFields.success) {
+  if (authSession.code !== code) {
+    authSession.timesAttempted = (authSession.timesAttempted ?? 0) + 1;
+    await authSession.save();
     return {
-      formErrors: validatedFields.error.flatten().formErrors,
-      fieldErrors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+      message: "کد وارد شده صحیح نمی باشد!",
     };
   }
 
@@ -139,47 +141,32 @@ export const verify = async (
     userSessionOptions
   );
 
-  const user = await fetchUser(userSession.user.phone);
-
   try {
     // Check user existence
+    const user = await fetchUser(authSession.phone);
 
     userSession.user = user;
 
     await userSession.save();
-    // succesed
+
+    revalidatePath("/store");
+
+    return {
+      success: true,
+      message: `${user.fullname}`,
+    };
   } catch (err) {
     // failure
     userSession.destroy();
     return {
-      formErrors: ["System Failure!"],
+      success: false,
+      message:
+        "خطای سیستمی رخ داده است. لطفا در زمانی دیگر مجدد تلاش بفرمایید.",
     };
   } finally {
     authSession.destroy();
   }
-
-  redirect("/");
 };
-
-export const editPhone = async () => {
-  const session = await getIronSession<AuthSessionData>(
-    cookies(),
-    authSessionOptions
-  );
-
-  session.destroy();
-};
-
-export async function getMsToResend(sentAt?: number) {
-  return (
-    (!!sentAt
-      ? sentAt
-      : (await getIronSession<AuthSessionData>(cookies(), authSessionOptions))
-          .sentAt ?? Date.now() - MS_TO_RESEND) +
-    MS_TO_RESEND -
-    Date.now()
-  );
-}
 
 export const getPhone = async () =>
   (await getIronSession<AuthSessionData>(cookies(), authSessionOptions)).phone;
