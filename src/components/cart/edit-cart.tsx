@@ -84,6 +84,10 @@ const EditCart: React.FC<Props> = ({ defaultValues, toAdd }) => {
                 </Button>
                 <FormControl>
                   <input
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    autoComplete="off"
+                    autoSave="off"
                     {...field}
                     value={field.value.toLocaleString("fa-IR")}
                     className="w-12 hover:outline-none text-center"
@@ -100,7 +104,6 @@ const EditCart: React.FC<Props> = ({ defaultValues, toAdd }) => {
                   <Minus className="h-4 w-4 m-0" />
                 </Button>
               </div>
-              <FormMessage />
             </FormItem>
           )}
         />

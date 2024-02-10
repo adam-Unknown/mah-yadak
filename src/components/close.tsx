@@ -54,8 +54,8 @@ export default function ClosePageButton({
             : router.back()
         }
       >
-        <ChevronRight className="h-4 w-4 inline ml-1" />
-        <small className="font-bold">بازگشت</small>
+        <ChevronRight className="inline ml-1" />
+        <span className="font-bold">بازگشت</span>
       </button>
     </motion.div>
   );

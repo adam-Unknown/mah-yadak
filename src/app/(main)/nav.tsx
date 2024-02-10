@@ -60,7 +60,9 @@ export default function Nav({
         <NavigationMenuList className="justify-between w-full py-2 px-6 bg-white ">
           <NavigationMenuItem
             className={`${
-              (pathname === "/store" || pathname.includes("part")) &&
+              (pathname === "/store" ||
+                pathname.includes("part") ||
+                pathname.includes("/store/search")) &&
               "text-primary"
             }`}
           >
@@ -177,7 +179,7 @@ export default function Nav({
                   </DrawerTitle>
                 </DrawerHeader>
                 <div className="mx-6">
-                  <ul className=" space-y-2">
+                  <ul className=" space-y-3">
                     <li>
                       <Moon
                         strokeWidth={3}

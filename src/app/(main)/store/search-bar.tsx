@@ -38,8 +38,8 @@ export default function SearchBar() {
   const [isLoading, setIsLoading] = useState(false);
 
   const control = useAnimation();
-  const initial = { top: "1.25rem", right: "0.5rem" };
-  const finial = { top: "0.5rem", right: "2.25rem" };
+  const initial = { top: "1.15rem", right: "0.5rem" };
+  const finial = { top: "0.5rem", right: "2.5rem" };
 
   const [formFocus, setFormFocus] = useState(false);
 
@@ -96,14 +96,16 @@ export default function SearchBar() {
 
   const submit = ({ query }: z.infer<typeof searchBarSchema>) => {
     if (query === undefined || query === "") return;
-    const _link = document.getElementById("searchLink") as HTMLLinkElement;
-    _link.href = `/search?q=${query}`;
-    _link.click();
+    document.getElementById("searchLink")?.click();
   };
 
   return (
     <>
-      <Link className="hidden" id="searchLink" href={``} />
+      <Link
+        className="hidden"
+        id="searchLink"
+        href={`/store/search?q=${form.watch("query")}`}
+      />
       <Form {...form}>
         <form onSubmit={form.handleSubmit(submit)}>
           <FormField
@@ -152,15 +154,17 @@ export default function SearchBar() {
         </button>
         <Separator className="w-[100vw] mb-2 shadow-lg bg-primary" />
 
-        <ul className="p-2">
-          {isLoading
-            ? "Loading"
-            : autoCompletes.map((autoComplete, index) => (
-                <React.Fragment key={autoComplete.id}>
-                  {index !== 0 && <Separator className="my-1" />}
-                  <AutoCompleteListItem {...autoComplete} />
-                </React.Fragment>
-              ))}
+        <ul className="px-4">
+          {isLoading ? (
+            <Loading />
+          ) : (
+            autoCompletes.map((autoComplete, index) => (
+              <React.Fragment key={autoComplete.id}>
+                {index !== 0 && <Separator className="my-1" />}
+                <AutoCompleteListItem {...autoComplete} />
+              </React.Fragment>
+            ))
+          )}
         </ul>
       </div>
     </>
@@ -169,21 +173,57 @@ export default function SearchBar() {
 
 function AutoCompleteListItem(data: AutoCompleteItemType) {
   return (
-    <li className="">
+    <li>
       <Link
         href={`/store/part/${data.id}`}
         className="flex items-center felx-row gap-3"
       >
         <Image
-          width={52}
-          height={52}
+          width={64}
+          height={64}
           src={data.imageUrl}
           alt="x"
-          className="w-[52px] h-[52px] rounded-sm"
+          className="w-16 h-16 rounded-sm"
         />
         <span className="grow">{data.name}</span>
         <ChevronLeft className="w-4 h-4" />
       </Link>
     </li>
+  );
+}
+
+function Loading() {
+  return (
+    <>
+      <li className="flex items-center felx-row gap-3">
+        <div className="w-16 h-16 animate-pulse bg-black/20 rounded-sm"></div>
+        <div className="h-5 grow animate-pulse bg-black/20 rounded"></div>
+        <ChevronLeft className="w-4 h-4 text-black/20" />
+      </li>
+      <Separator className="my-1" />
+      <li className="flex items-center felx-row gap-3 opacity-85">
+        <div className="w-16 h-16 animate-pulse bg-black/20 rounded-sm"></div>
+        <div className="h-5 grow animate-pulse bg-black/20 rounded"></div>
+        <ChevronLeft className="w-4 h-4 text-black/20" />
+      </li>
+      <Separator className="my-1 opacity-85" />
+      <li className="flex items-center felx-row gap-3 opacity-50">
+        <div className="w-16 h-16 animate-pulse bg-black/20 rounded-sm"></div>
+        <div className="h-5 grow animate-pulse bg-black/20 rounded"></div>
+        <ChevronLeft className="w-4 h-4 text-black/20" />
+      </li>
+      <Separator className="my-1 opacity-50" />
+      <li className="flex items-center felx-row gap-3 opacity-20">
+        <div className="w-16 h-16 animate-pulse bg-black/20 rounded-sm"></div>
+        <div className="h-5 grow animate-pulse bg-black/20 rounded"></div>
+        <ChevronLeft className="w-4 h-4 text-black/20" />
+      </li>
+      <Separator className="my-1 opacity-20" />
+      <li className="flex items-center felx-row gap-3 opacity-5">
+        <div className="w-16 h-16 animate-pulse bg-black/20 rounded-sm"></div>
+        <div className="h-5 grow animate-pulse bg-black/20 rounded"></div>
+        <ChevronLeft className="w-4 h-4 text-black/20" />
+      </li>
+    </>
   );
 }

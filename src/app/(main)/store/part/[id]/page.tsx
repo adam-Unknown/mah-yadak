@@ -38,7 +38,10 @@ const Page: React.FC<Props> = async ({ params: { id } }) => {
       imageUrls: 1,
       notes: 1,
       available: {
-        $gte: [{ $sum: [-"$warehouse.stock", "$withinOrderProcessing"] }, 1],
+        $gte: [
+          { $subtract: ["$warehouse.stock", "$withinOrderProcessing"] },
+          1,
+        ],
       },
       brand: 1,
       description: 1,
@@ -168,7 +171,7 @@ const Page: React.FC<Props> = async ({ params: { id } }) => {
             <AlertTitle>اتمام موجودی!</AlertTitle>
             <AlertDescription>
               <p>متاسفانه موجودی این قطعه به اتمام رسیده.</p>
-              <p>و به زودی موجود خواهد شد.</p>
+              <p>و بزودی موجود خواهد شد.</p>
             </AlertDescription>
           </Alert>
         )}

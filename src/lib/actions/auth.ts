@@ -2,15 +2,11 @@
 import { authSessionOptions, userSessionOptions } from "@/session.config";
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { z } from "zod";
 import { isRegistered, fetchUser } from "../data";
 import {
   PhoneEnterFormSchema,
-  CodeVerifyFormSchema,
   AuthSessionData,
   UserSessionData,
-  State,
   SEC_TO_RESEND,
 } from "../definition";
 import { generateSmsCode } from "../utils";
