@@ -25,7 +25,7 @@ export default function Error({
         <Button
           onClick={
             // Attempt to recover by trying to re-render the segment
-            () => reset()
+            window.location.reload.bind(window.location)
           }
         >
           تلاش مجدد

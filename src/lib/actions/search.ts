@@ -133,6 +133,7 @@ export async function fetchPartsWithFilter(
   limit: number
 ): Promise<PartSearchResultItemType[]> {
   const session = await getUserSession();
+  if (!query || query.length < 2) return [];
   const result = await getMongoDbCrudExecutor(
     "parts",
     async (parts) =>

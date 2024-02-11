@@ -121,7 +121,7 @@ export default function SearchBar() {
                 >
                   <FormControl>
                     <Input
-                      className="w-full bg-white hover:outline-1 hover:outline-primary"
+                      className="w-full bg-white hover:outline-1 hover:outline-primary shadow-lg"
                       {...field}
                       autoCapitalize="off"
                       autoCorrect="off"

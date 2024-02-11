@@ -10,6 +10,8 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import Autoplay from "embla-carousel-autoplay";
+import AutoHeight from "embla-carousel-auto-height";
 
 type CarouselProps = {
   opts?: CarouselOptions;
@@ -48,7 +50,10 @@ const Carousel = React.forwardRef<
       orientation = "horizontal",
       opts,
       setApi,
-      plugins,
+      plugins = [
+        Autoplay({ delay: 3000, stopOnInteraction: true }),
+        AutoHeight(),
+      ],
       className,
       children,
       ...props
