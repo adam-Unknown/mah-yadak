@@ -38,11 +38,15 @@ type ShowcaseType = {
 
 // This store compoenent ui going to be smilar to Digikala ui
 export default async function Store() {
-  // const recommendationList = await fetchrecommendationLists();
-  // const messages =
-  //   (await getMongoDbCrudExecutor("messages", async (messages) =>
-  //     messages.find({}).toArray()
-  //   )()) ?? [];
+  const messages =
+    (await getMongoDbCrudExecutor("messages", async (messages) =>
+      messages.find({}).toArray()
+    )()) ?? [];
+
+  const adsImageUrls = await getMongoDbCrudExecutor(
+    "ads-imags-urls",
+    async (adsImageUrls) => adsImageUrls.find({}).next()
+  )();
 
   const showcases = await getMongoDbCrudExecutor<ShowcaseType[]>(
     "showcases",
@@ -120,16 +124,44 @@ export default async function Store() {
   )();
 
   return (
-    <div className="pt-16 space-y-2 overflow-hidden">
-      {/* {messages.map((message, index) => (
-        <Alert key={index} variant={"default"} className="rounded-sm bg-white">
-          <AlertTitle>
-            <Moon className="h-4 w-4 inline" />
-            {message?.title}
-          </AlertTitle>
-          <AlertDescription>{message?.message}</AlertDescription>
-        </Alert>
-      ))} */}
+    <div className="pt-20 pb-8 space-y-6 overflow-hidden">
+      <div className="px-2">
+        {messages.map((message, index) => (
+          <Alert
+            key={index}
+            variant={"default"}
+            className="rounded-sm bg-white"
+          >
+            <AlertTitle>
+              <Moon className="h-4 w-4 inline" />
+              {message?.title}
+            </AlertTitle>
+            <AlertDescription>{message?.message}</AlertDescription>
+          </Alert>
+        ))}
+      </div>
+
+      <Carousel
+        delay={5000}
+        opts={{ loop: false, align: "start", direction: "rtl" }}
+        className="w-full mx-auto shadow-lg"
+        dir="rtl"
+      >
+        <CarouselContent>
+          {(adsImageUrls?.imageUrls as string[]).map((imageUrl) => (
+            <CarouselItem key={imageUrl}>
+              <Image
+                width={1920}
+                height={1080}
+                src={imageUrl}
+                alt="خطا در بارگزاری تصویر"
+                className="w-full aspect-video"
+              />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
+
       <div className="space-y-4">
         {showcases.map((showcase) => (
           <div key={showcase.id} className="space-y-2">

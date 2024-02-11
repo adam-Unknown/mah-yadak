@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -11,6 +20,12 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import {
+  ShareDialog,
+  ShareDialogCancel,
+  ShareDialogContent,
+  ShareDialogTrigger,
+} from "@/components/ui/mah-yadak-share";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -30,6 +45,7 @@ import {
   MessageCircleMore,
   Moon,
   Phone,
+  QrCode,
   ScrollText,
   ShoppingBag,
   ShoppingCart,
@@ -38,6 +54,7 @@ import {
   User,
   Warehouse,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -211,6 +228,29 @@ export default function Nav({
                         </span>
                       }
                     </span>
+                  </li>
+                  <Separator />
+                  <li className="flex flex-row justify-between">
+                    <ShareDialog>
+                      <ShareDialogTrigger>
+                        <QrCode className="w-4 h-4 inline ml-2" />
+                        اشتراک گذاری
+                      </ShareDialogTrigger>
+                      <ShareDialogContent className="z-[20002]">
+                        <Image
+                          height={480}
+                          width={480}
+                          src="/mah-yadak.png"
+                          alt="خطا در بارگذاری تصویر"
+                          className="w-full aspect-square"
+                        />
+                        <ShareDialogCancel className="bg-primary">
+                          بستن
+                        </ShareDialogCancel>
+                      </ShareDialogContent>
+                    </ShareDialog>
+
+                    <ChevronLeft className="w-4 h-4 inline my-auto" />
                   </li>
                   <Separator />
                   <li className="flex flex-row justify-between">

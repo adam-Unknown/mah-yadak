@@ -43,15 +43,16 @@ function useCarousel() {
 
 const Carousel = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & CarouselProps
+  React.HTMLAttributes<HTMLDivElement> & CarouselProps & { delay?: number }
 >(
   (
     {
+      delay,
       orientation = "horizontal",
       opts,
       setApi,
       plugins = [
-        Autoplay({ delay: 3000, stopOnInteraction: true }),
+        Autoplay({ delay: delay ?? 3000, stopOnInteraction: true }),
         AutoHeight(),
       ],
       className,
