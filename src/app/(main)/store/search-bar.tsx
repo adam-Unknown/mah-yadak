@@ -140,7 +140,7 @@ export default function SearchBar() {
         </form>
       </Form>
       <div
-        className={`fixed inset-0 m-0 z-[99] pt-12 overflow-x-scroll bg-background`}
+        className={`fixed inset-0 m-0 z-[99] pt-10 overflow-x-scroll bg-background`}
         hidden={!formFocus}
       >
         <button

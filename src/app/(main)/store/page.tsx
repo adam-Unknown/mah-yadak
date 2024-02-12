@@ -121,7 +121,7 @@ export default async function Store() {
 
   return (
     <div className="pt-20 pb-8 space-y-6 overflow-hidden">
-      <div className="px-2">
+      <div className="px-2 space-y-2">
         {messages.map((message, index) => (
           <Alert
             key={index}

@@ -14,10 +14,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { msgSentContext } from "./page";
 import { sendCode } from "@/lib/actions/auth";
 import { useTimer } from "react-timer-hook";
 import { MessageSquareText, Pencil, Phone, RotateCw } from "lucide-react";
+import { msgSentContext } from "./context";
 
 const sendFormSchema = z.object({
   phone: z

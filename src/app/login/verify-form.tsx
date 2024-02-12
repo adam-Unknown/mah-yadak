@@ -14,11 +14,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { msgSentContext } from "./page";
 import { verify } from "@/lib/actions/auth";
 import { KeySquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { msgSentContext } from "./context";
 
 const verifyFormSchema = z.object({
   code: z

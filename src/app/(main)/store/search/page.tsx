@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { motion, useAnimation } from "framer-motion";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
@@ -12,7 +12,7 @@ import Link from "next/link";
 import { fetchPartsWithFilter } from "@/lib/actions/search";
 import { Badge } from "@/components/ui/badge";
 import InfiniteScroll from "react-infinite-scroll-component";
-import { ChevronsUp } from "lucide-react";
+import { ChevronsUp, Phone } from "lucide-react";
 
 const searchBarSchema = z.object({ query: z.string().optional() });
 
@@ -28,13 +28,18 @@ export type PartSearchResultItemType = {
 };
 
 export default function Page() {
+  const router = useRouter();
   const params = useSearchParams();
   const form = useForm<z.infer<typeof searchBarSchema>>({
     resolver: zodResolver(searchBarSchema),
     defaultValues: { query: params.get("q") || "" },
   });
+
+  const limit = 10;
+
+  const [isLoading, setIsLoading] = useState(false);
   const [query, setQuery] = useState(params.get("q") || "");
-  const [skip, setSkip] = useState(0);
+  const [skip, setSkip] = useState(limit);
   const [hasMore, setHasMore] = useState(true);
   const [partSearchResult, setPartSearchResult] = useState<
     PartSearchResultItemType[]
@@ -42,12 +47,10 @@ export default function Page() {
 
   useEffect(() => {
     fetchPartsWithFilter(query, 0, limit).then((result) => {
-      if (result.length === 0) setHasMore(false);
+      if (result.length < limit) setHasMore(false);
       setPartSearchResult(result);
     });
   }, []);
-
-  const limit = 10;
 
   const control = useAnimation();
   const initial = { top: "1.15rem" };
@@ -80,13 +83,15 @@ export default function Page() {
 
   const submit = async ({ query }: z.infer<typeof searchBarSchema>) => {
     if (!query) return;
-    const result = await fetchPartsWithFilter(query, 0, 10);
-    setPartSearchResult(result);
+    setIsLoading(true);
+    const a = document.createElement("a");
+    a.setAttribute("href", `/store/search?q=${query}`);
+    a.click();
   };
 
   // TODO add load more feature
   return (
-    <div className="pt-16 px-2 overflow-x-hidden">
+    <div className="pt-20 px-2 overflow-x-hidden">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(submit)}>
           <FormField
@@ -118,34 +123,40 @@ export default function Page() {
         </form>
       </Form>
       <p className="overflow-clip">
-        <span className="m-2 font-bold text-lg">نتایج جستجو:</span>
+        <span className="mx-2 font-bold text-lg">نتایج جستجو:</span>
       </p>
-      <InfiniteScroll
-        dataLength={partSearchResult.length}
-        hasMore={hasMore}
-        next={() => {
-          setSkip((prev) => prev + limit);
-          fetchPartsWithFilter(query, skip + limit, limit).then((result) => {
-            setHasMore(!!Math.floor(result.length / limit));
+      <div className="w-full mt-4 space-y-3">
+        {isLoading ? (
+          <Loading />
+        ) : (
+          <InfiniteScroll
+            dataLength={partSearchResult.length}
+            hasMore={hasMore}
+            next={() => {
+              setSkip((prev) => prev + limit);
+              fetchPartsWithFilter(query, skip, limit).then((result) => {
+                setHasMore(!!Math.floor(result.length / limit));
 
-            setPartSearchResult((prev) => [...prev, ...result]);
-          });
-        }}
-        loader={<Loading />}
-        endMessage={
-          <p className="my-2 text-center font-bold text-black/50">
-            نتایج بیشتری وجود ندارد.
-          </p>
-        }
-      >
-        <ul className="py-3 space-y-3 mb-2">
-          {partSearchResult.map((part, index) => (
-            <li key={index}>
-              <PartResultCard {...part} />
-            </li>
-          ))}
-        </ul>
-      </InfiniteScroll>
+                setPartSearchResult((prev) => [...prev, ...result]);
+              });
+            }}
+            loader={<Loading />}
+            endMessage={
+              <p className="my-2 text-center font-bold text-black/50">
+                نتایج بیشتری وجود ندارد.
+              </p>
+            }
+          >
+            <ul className="space-y-3">
+              {partSearchResult.map((part, index) => (
+                <li key={index}>
+                  <PartResultCard {...part} />
+                </li>
+              ))}
+            </ul>
+          </InfiniteScroll>
+        )}
+      </div>
       <ScrollToTopButton />
     </div>
   );
@@ -176,12 +187,19 @@ function PartResultCard(part: PartSearchResultItemType) {
               <Badge variant="default">
                 <small>موجود</small>
               </Badge>
-              <p>
-                <span className="font-bold">
-                  {part.price.toLocaleString("fa-IR")}
-                </span>{" "}
-                تومان
-              </p>
+              {!!part.price ? (
+                <>
+                  <span className="font-bold">
+                    {part.price?.toLocaleString("fa-IR")}
+                  </span>{" "}
+                  تومان
+                </>
+              ) : (
+                <>
+                  تماس بگیرید
+                  <Phone className="inline w-4 h-4 mr-1" />
+                </>
+              )}
             </>
           ) : (
             <Badge variant="secondary">
@@ -196,7 +214,7 @@ function PartResultCard(part: PartSearchResultItemType) {
 
 function Loading() {
   return (
-    <ul className="-mt-2 space-y-3">
+    <ul className="space-y-3">
       <li className="p-3 grid grid-cols-7 gap-2 border border-gray-200 bg-white rounded-sm shadow-md">
         <div className="col-span-2 w-full h-full aspect-square animate-pulse bg-black/20 rounded-sm"></div>
         <div className="col-span-5 p-2 space-y-4">

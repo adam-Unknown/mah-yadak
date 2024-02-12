@@ -11,7 +11,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Frown } from "lucide-react";
+import { Dot, Frown } from "lucide-react";
 import ClosePageButton from "@/components/close";
 
 interface Props {
@@ -109,7 +109,7 @@ const Page: React.FC<Props> = async ({ params: { id } }) => {
       <Card className="rounded-sm p-2 space-y-3">
         <CardHeader className="p-0">
           <PartCarousel imagesUrls={part?.imageUrls} />
-          <p className="mt-1 text-center text-xl">
+          <p className="m-3 text-center text-xl">
             <span className="font-bold">{`${part?.model} ${part?.properties} `}</span>
             {`${part?.usedFor.join(",")} `}
             <span className="font-bold">{`${part?.brand}`}</span>
@@ -118,19 +118,6 @@ const Page: React.FC<Props> = async ({ params: { id } }) => {
         {part?.available ? (
           <>
             <CardContent className="space-y-4">
-              {part?.notices && (
-                <Alert variant={"destructive"} className="grid-cols-2">
-                  <AlertTitle>توجه!</AlertTitle>
-                  <AlertDescription>
-                    <ul>
-                      {part.notices.map((notice: any, index: number) => (
-                        <li key={index}>{notice}</li>
-                      ))}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              )}
-
               <p className="text-lg">
                 قیمت:{" "}
                 <span className="font-bold">
@@ -144,6 +131,29 @@ const Page: React.FC<Props> = async ({ params: { id } }) => {
                   toAdd={true}
                   defaultValues={{ partId: part?._id.toString(), quantity: 1 }}
                 />
+              )}
+              {part?.notes && (
+                <Alert variant="destructive">
+                  <AlertTitle>توجه</AlertTitle>
+                  <AlertDescription className="w-full overflow-x-clip break-words">
+                    <ul className="text-wrap">
+                      {part.notes.map((notice: any, index: number) => (
+                        <li key={index}>
+                          <p>* {notice}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {part?.description && (
+                <Alert variant={"default"}>
+                  <AlertTitle>توضیحات</AlertTitle>
+                  <AlertDescription className="text-wrap">
+                    <p>{part.description}</p>
+                  </AlertDescription>
+                </Alert>
               )}
             </CardContent>
             {user && (
