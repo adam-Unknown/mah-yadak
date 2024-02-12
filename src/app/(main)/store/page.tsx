@@ -3,17 +3,13 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
 } from "@/components/ui/carousel";
-import StoreCarousel from "@/components/ui/carousel/store";
 import Link from "next/link";
-import React, { Suspense } from "react";
+import React from "react";
 import Image from "next/image";
-import { MongoClient, ServerApiVersion } from "mongodb";
 import { getMongoDbCrudExecutor } from "@/lib/data";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Moon, Terminal } from "lucide-react";
+import { Mail } from "lucide-react";
 import SearchBar from "./search-bar";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -133,7 +129,7 @@ export default async function Store() {
             className="rounded-sm bg-white"
           >
             <AlertTitle>
-              <Moon className="h-4 w-4 inline" />
+              <Mail className="h-4 w-4 inline" />
               {message?.title}
             </AlertTitle>
             <AlertDescription>{message?.message}</AlertDescription>

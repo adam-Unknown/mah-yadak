@@ -3,19 +3,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "../ui/form";
+import { Form, FormControl, FormField, FormItem } from "../ui/form";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { addItemToCart, editItemInCart } from "@/lib/actions/cart";
 import { usePathname, useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingBasket, ShoppingCart } from "lucide-react";
+import { Minus, Plus, ShoppingCart } from "lucide-react";
 
 interface Props {
   toAdd?: boolean;

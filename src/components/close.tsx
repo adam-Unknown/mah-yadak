@@ -1,8 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Button } from "./ui/button";
-import { ChevronRight, XSquare } from "lucide-react";
-import { motion, useAnimation, useScroll } from "framer-motion";
+import { ChevronRight } from "lucide-react";
+import { motion, useAnimation } from "framer-motion";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 

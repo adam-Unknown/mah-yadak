@@ -12,10 +12,20 @@ export default async function middleware(req: NextRequest) {
     cookies(),
     userSessionOptions
   );
-  // user is already authenticated, then we don't need to do anything
-  if (session.verified && req.nextUrl.pathname.endsWith("/login")) {
-    return NextResponse.redirect(new URL("/", req.nextUrl.origin));
+
+  if (session.user && req.nextUrl.pathname === "/login") {
+    return NextResponse.redirect(new URL("/store", req.nextUrl.origin));
+  } else if (!session.user) {
+    switch (req.nextUrl.pathname) {
+      case "/dashboard":
+        return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
+      case "/dashboard/details":
+        return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
+      case "/store/order":
+        return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
+    }
   }
+
   //   }
   //   if (
   //     (!session.verified || !session.user) &&

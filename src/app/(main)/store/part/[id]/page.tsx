@@ -1,25 +1,17 @@
 "use server";
 import React from "react";
-import {
-  fetchPart,
-  fetchStoreStatus,
-  getMongoDbCrudExecutor,
-  getUserSession,
-} from "@/lib/data";
+import { getMongoDbCrudExecutor, getUserSession } from "@/lib/data";
 import PartCarousel from "@/components/ui/carousel/part";
 import EditCart from "@/components/cart/edit-cart";
 import { ObjectId } from "mongodb";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Banknote, Frown, Terminal } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Frown } from "lucide-react";
 import ClosePageButton from "@/components/close";
 
 interface Props {

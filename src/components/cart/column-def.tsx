@@ -24,10 +24,7 @@ import { removeItemFromCart } from "@/lib/actions/cart";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Input } from "../ui/input";
-import AddToCart from "./edit-cart";
 import EditCart from "./edit-cart";
-import { Popover } from "../ui/popover";
 import { Trash2 } from "lucide-react";
 
 export type cartItemTypeInTable = {

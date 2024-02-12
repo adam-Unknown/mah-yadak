@@ -22,15 +22,19 @@ export default function Index() {
   };
 
   return (
-    <div className="relative w-screen overflow-clip h-screen p-3 flex flex-col justify-center space-y-6 bg-[url('/wallpaper.jpg')] bg-cover text-primary">
-      <h1 className="text-xl mx-auto font-bold text-center">
-        خوش آمدید <Moon className="inline" />
-      </h1>
-      <p className="text-center">
-        معرفی: به وب سایت ماه یدک خوش آمدید, هدف از راه اندازی این وب سرویس جهت
-        ایجاد سهولت در دسترسی به انواع قطعات با کیفیت, کمیاب, برند برتر و از همه
-        مهم تر قیمت مناسب قطعات
-      </p>
+    <div className="relative w-screen overflow-clip h-screen px-6 flex flex-col justify-center content-around bg-top space-y-20 bg-[url('/moon.jpg')] bg-cover text-primary">
+      <div className="mt-6">
+        <h1 className="text-3xl mx-auto font-bold text-center mb-6">
+          خوش آمدید <Moon className="inline" />
+        </h1>
+        <p className="text-center">
+          به وب سایت ماه یدک خوش آمدید. ما با ارائه خدمات بی نظیر خود، به دنبال
+          ایجاد تجربه ای متفاوت برای خرید قطعات یدکی هستیم. از قطعات با کیفیت
+          برتر تا قطعات کمیاب، همه و همه در اینجا قابل دسترس هستند. اما هدف اصلی
+          ما ارائه این محصولات با قیمت مناسب و رقابتی است. امیدواریم تجربه خرید
+          خوبی را در وب سایت ماه یدک داشته باشید.
+        </p>
+      </div>
 
       <Form {...form}>
         <form
@@ -65,11 +69,9 @@ export default function Index() {
           </Button>
         </form>
       </Form>
-      <div className="absolute left-0 right-0 bottom-16 flex flex-row justify-center">
-        <Link href="/store">
-          <Button>ورود به فروشگاه</Button>
-        </Link>
-      </div>
+      <Link href="/store" className="mx-auto">
+        <Button>ورود به فروشگاه</Button>
+      </Link>
     </div>
   );
 }

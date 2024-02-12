@@ -4,8 +4,6 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
-import { DialogCloseProps } from "@radix-ui/react-dialog";
 import { useSearchParams } from "next/navigation";
 
 const Sheet = SheetPrimitive.Root;

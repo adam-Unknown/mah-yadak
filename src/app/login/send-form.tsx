@@ -8,7 +8,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import React, { useCallback, useContext, useEffect } from "react";
+import React, { useContext } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { msgSentContext } from "./page";
 import { sendCode } from "@/lib/actions/auth";
 import { useTimer } from "react-timer-hook";
-import { MessageSquareText, Pencil, Phone, RotateCw, Send } from "lucide-react";
+import { MessageSquareText, Pencil, Phone, RotateCw } from "lucide-react";
 
 const sendFormSchema = z.object({
   phone: z

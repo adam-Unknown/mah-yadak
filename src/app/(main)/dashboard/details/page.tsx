@@ -1,18 +1,6 @@
 "use server";
-import { Button } from "@/components/ui/button";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
 import { getUserSession } from "@/lib/data";
-import { CircleUser, MapPin, Phone, User, Wrench } from "lucide-react";
-import Link from "next/link";
+import { CircleUser, MapPin, Phone, Wrench } from "lucide-react";
 
 const Account = async () => {
   const { user } = await getUserSession();

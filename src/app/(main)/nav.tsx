@@ -1,20 +1,9 @@
 "use client";
 
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
-  DrawerDescription,
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
@@ -28,18 +17,15 @@ import {
 } from "@/components/ui/mah-yadak-share";
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { Separator } from "@/components/ui/separator";
 import { logout } from "@/lib/actions/auth";
 import {
   ChevronLeft,
   CircleUserRound,
-  Dot,
   Hand,
   MapPin,
   MessageCircleMore,
@@ -48,11 +34,8 @@ import {
   QrCode,
   ScrollText,
   ShoppingBag,
-  ShoppingCart,
-  Speech,
   Store,
   User,
-  Warehouse,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";

@@ -1,8 +1,8 @@
 "use client";
 
 import Login from "@/app/login/page";
-import { Sheet, SheetContent, SheetTitle } from "./sheet";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Sheet, SheetContent } from "./sheet";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function Page() {
   const router = useRouter();

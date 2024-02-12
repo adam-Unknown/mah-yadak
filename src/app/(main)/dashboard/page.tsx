@@ -1,14 +1,8 @@
 "use client";
-import { logout } from "@/lib/actions/auth";
+import { redirect } from "next/navigation";
 
 function Dashboard() {
-  return (
-    <div>
-      <form action={logout}>
-        <button type="submit">Sign out</button>
-      </form>
-    </div>
-  );
+  redirect("/dashboard/details");
 }
 
 export default Dashboard;

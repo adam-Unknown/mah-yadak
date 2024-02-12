@@ -8,6 +8,7 @@ import {
   fetchStoreStatus,
   getUserSession,
 } from "@/lib/data";
+import { Fingerprint } from "lucide-react";
 import React from "react";
 
 const CartPage: React.FC = async () => {
@@ -25,7 +26,12 @@ const CartPage: React.FC = async () => {
         : "در حال حاضر خدمات ارسال به محل ارائه نمی‌شود."}
     </div>
   ) : (
-    "لطفا ابتدا وارد شوید."
+    <div className="h-screen w-full overflow-hidden flex justify-center items-center space-y-6">
+      <div className="flex flex-col justify-center items-center space-y-12 text-black/35">
+        <Fingerprint size={48} />
+        <p className="font-bold">برای مشاهده سبد خرید بایستی وارد شوید</p>
+      </div>
+    </div>
   );
 };
 

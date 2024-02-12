@@ -1,18 +1,15 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { motion, useAnimation } from "framer-motion";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { Popover } from "@/components/ui/popover";
-import { PopoverContent } from "@radix-ui/react-popover";
+import { ChevronLeft, X } from "lucide-react";
 import Link from "next/link";
 import fetchAutoComplete from "@/lib/actions/search";
 import React from "react";
