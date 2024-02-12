@@ -2,13 +2,12 @@
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, useAnimation } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { fetchPartsWithFilter } from "@/lib/actions/search";
 import { Badge } from "@/components/ui/badge";
@@ -139,7 +138,7 @@ export default function Page() {
           </p>
         }
       >
-        <ul className="py-3 space-y-3">
+        <ul className="py-3 space-y-3 mb-2">
           {partSearchResult.map((part, index) => (
             <li key={index}>
               <PartResultCard {...part} />
