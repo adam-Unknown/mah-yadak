@@ -22,8 +22,8 @@ export default function Index() {
   };
 
   return (
-    <div className="relative w-screen overflow-clip h-screen px-6 flex flex-col justify-center content-around bg-top space-y-20 bg-[url('/moon.jpg')] bg-cover text-primary">
-      <div className="mt-6">
+    <div className="relative w-screen overflow-hidden h-screen px-6 flex flex-col justify-center content-around bg-top space-y-20 bg-[url('/moon.jpg')] bg-cover text-primary">
+      <div>
         <h1 className="text-3xl mx-auto font-bold text-center mb-6">
           خوش آمدید <Moon className="inline" />
         </h1>

@@ -9,7 +9,7 @@ import React from "react";
 import Image from "next/image";
 import { getMongoDbCrudExecutor } from "@/lib/data";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Mail } from "lucide-react";
+import { Mail, MailOpen } from "lucide-react";
 import SearchBar from "./search-bar";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -129,7 +129,7 @@ export default async function Store() {
             className="rounded-sm bg-white"
           >
             <AlertTitle>
-              <Mail className="h-4 w-4 inline" />
+              <MailOpen className="h-5 w-5 inline ml-2" />
               {message?.title}
             </AlertTitle>
             <AlertDescription>{message?.message}</AlertDescription>

@@ -188,17 +188,17 @@ function PartResultCard(part: PartSearchResultItemType) {
                 <small>موجود</small>
               </Badge>
               {!!part.price ? (
-                <>
+                <div>
                   <span className="font-bold">
                     {part.price?.toLocaleString("fa-IR")}
                   </span>{" "}
                   تومان
-                </>
+                </div>
               ) : (
-                <>
+                <div>
                   تماس بگیرید
                   <Phone className="inline w-4 h-4 mr-1" />
-                </>
+                </div>
               )}
             </>
           ) : (
