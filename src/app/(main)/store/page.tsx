@@ -130,7 +130,7 @@ export default async function Store() {
           >
             <AlertTitle>
               <MailOpen className="h-5 w-5 inline ml-2" />
-              {message?.title}
+              <p className="inline font-bold">{message?.title}</p>
             </AlertTitle>
             <AlertDescription>{message?.message}</AlertDescription>
           </Alert>

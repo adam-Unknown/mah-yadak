@@ -132,9 +132,9 @@ const Page: React.FC<Props> = async ({ params: { id } }) => {
                   defaultValues={{ partId: part?._id.toString(), quantity: 1 }}
                 />
               )}
-              {part?.notes && (
+              {part?.notes && part.notes?.lenght > 0 && (
                 <Alert variant="destructive">
-                  <AlertTitle>توجه</AlertTitle>
+                  <AlertTitle className="font-bold">توجه</AlertTitle>
                   <AlertDescription className="w-full overflow-x-clip break-words">
                     <ul className="text-wrap">
                       {part.notes.map((notice: any, index: number) => (
@@ -149,7 +149,7 @@ const Page: React.FC<Props> = async ({ params: { id } }) => {
 
               {part?.description && (
                 <Alert variant={"default"}>
-                  <AlertTitle>توضیحات</AlertTitle>
+                  <AlertTitle className="font-bold">توضیحات</AlertTitle>
                   <AlertDescription className="text-wrap">
                     <p>{part.description}</p>
                   </AlertDescription>
